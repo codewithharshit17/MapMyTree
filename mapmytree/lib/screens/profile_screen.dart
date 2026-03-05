@@ -37,10 +37,10 @@ class ProfileScreen extends StatelessWidget {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                           border: Border.all(
-                              color: Colors.white.withOpacity(0.5), width: 2.5),
+                              color: Colors.white.withValues(alpha: 0.5), width: 2.5),
                         ),
                         child: const Center(
                           child: Text('👤', style: TextStyle(fontSize: 38)),
@@ -60,7 +60,7 @@ class ProfileScreen extends StatelessWidget {
                       Text(
                         'Tree Mapper · Level 7',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.75),
+                          color: Colors.white.withValues(alpha: 0.75),
                           fontSize: 13,
                         ),
                       ),
@@ -161,9 +161,9 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withOpacity(0.1),
+        color: AppTheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -187,9 +187,9 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.15)),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Column(
         children: [
@@ -244,7 +244,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(Icons.chevron_right_rounded,
+            const Icon(Icons.chevron_right_rounded,
                 color: AppTheme.textLight, size: 18),
           ],
         ),

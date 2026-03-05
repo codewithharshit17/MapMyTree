@@ -42,7 +42,7 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
               icon: Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.arrow_back_rounded,
@@ -55,7 +55,7 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
                 icon: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.share_rounded,
@@ -78,7 +78,7 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
                     colors: [
                       AppTheme.primaryDark,
                       AppTheme.primary,
-                      AppTheme.accent.withOpacity(0.8),
+                      AppTheme.accent.withValues(alpha: 0.8),
                     ],
                   ),
                 ),
@@ -93,7 +93,7 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
                         height: 180,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.06),
+                          color: Colors.white.withValues(alpha: 0.06),
                         ),
                       ),
                     ),
@@ -105,7 +105,7 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
                         height: 120,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.05),
+                          color: Colors.white.withValues(alpha: 0.05),
                         ),
                       ),
                     ),
@@ -132,7 +132,7 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
                           Text(
                             tree.species,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.75),
+                              color: Colors.white.withValues(alpha: 0.75),
                               fontSize: 14,
                               fontStyle: FontStyle.italic,
                             ),
@@ -156,7 +156,7 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                   ),
                 ],
@@ -235,7 +235,7 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppTheme.divider.withOpacity(0.5),
+                  color: AppTheme.divider.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TabBar(
@@ -382,7 +382,7 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primary.withOpacity(0.35),
+                      color: AppTheme.primary.withValues(alpha: 0.35),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -419,16 +419,16 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.15)),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 18),
@@ -494,7 +494,7 @@ class _TreeDetailScreenState extends State<TreeDetailScreen>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.1),
+              color: AppTheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: AppTheme.primary, size: 18),

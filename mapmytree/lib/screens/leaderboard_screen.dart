@@ -95,7 +95,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.4),
+            color: AppTheme.primaryGreen.withValues(alpha: 0.4),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -107,7 +107,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: const Center(
@@ -152,7 +152,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               Text(
                 '0.6 tons CO₂',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                   fontSize: 13,
                 ),
               ),
@@ -219,15 +219,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isTop3
-            ? medalColors[index].withOpacity(0.08)
+            ? medalColors[index].withValues(alpha: 0.08)
             : Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: isTop3
-            ? Border.all(color: medalColors[index].withOpacity(0.3))
+            ? Border.all(color: medalColors[index].withValues(alpha: 0.3))
             : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
           ),
         ],
@@ -260,7 +260,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             height: 48,
             decoration: BoxDecoration(
               color: isTop3
-                  ? medalColors[index].withOpacity(0.2)
+                  ? medalColors[index].withValues(alpha: 0.2)
                   : AppTheme.paleGreen,
               shape: BoxShape.circle,
             ),

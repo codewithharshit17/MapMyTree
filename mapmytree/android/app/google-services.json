@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "190261415345",
+    "project_id": "mapmytree-22b03",
+    "storage_bucket": "mapmytree-22b03.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:190261415345:android:40526b37f91b8bc3f58190",
+        "android_client_info": {
+          "package_name": "com.example.mapmytree"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCMZSMTDtof6LFkKm2VqJCP3JxpUbFoX8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

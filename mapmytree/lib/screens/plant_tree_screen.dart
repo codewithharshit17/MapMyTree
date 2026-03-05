@@ -184,7 +184,7 @@ class _PlantTreeScreenState extends State<PlantTreeScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 8,
                       ),
                     ],
@@ -290,7 +290,7 @@ class _PlantTreeScreenState extends State<PlantTreeScreen> {
                           boxShadow: [
                             BoxShadow(
                               color: AppTheme.primaryGreen
-                                  .withOpacity(0.4),
+                                  .withValues(alpha: 0.4),
                               blurRadius: 16,
                               spreadRadius: 4,
                             ),
@@ -313,7 +313,7 @@ class _PlantTreeScreenState extends State<PlantTreeScreen> {
                       borderRadius: BorderRadius.circular(10),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 8,
                         ),
                       ],
@@ -339,29 +339,29 @@ class _PlantTreeScreenState extends State<PlantTreeScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          TextField(
-            decoration: const InputDecoration(
+          const TextField(
+            decoration: InputDecoration(
               hintText: 'Enter address or location name',
               prefixIcon:
                   Icon(Icons.location_on_outlined, color: AppTheme.grey),
             ),
           ),
           const SizedBox(height: 12),
-          Row(
+          const Row(
             children: [
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Latitude',
                     prefixIcon: Icon(Icons.gps_fixed, color: AppTheme.grey),
                   ),
                   keyboardType: TextInputType.number,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Longitude',
                     prefixIcon: Icon(Icons.gps_fixed, color: AppTheme.grey),
                   ),
@@ -395,18 +395,18 @@ class _PlantTreeScreenState extends State<PlantTreeScreen> {
             style: TextStyle(color: AppTheme.grey, fontSize: 14),
           ),
           const SizedBox(height: 24),
-          TextField(
-            decoration: const InputDecoration(
+          const TextField(
+            decoration: InputDecoration(
               hintText: 'Tree name (optional)',
               prefixIcon: Icon(Icons.eco_outlined, color: AppTheme.grey),
             ),
           ),
           const SizedBox(height: 12),
-          Row(
+          const Row(
             children: [
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Height (m)',
                     prefixIcon:
                         Icon(Icons.height, color: AppTheme.grey),
@@ -414,10 +414,10 @@ class _PlantTreeScreenState extends State<PlantTreeScreen> {
                   keyboardType: TextInputType.number,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Age (years)',
                     prefixIcon: Icon(Icons.calendar_today,
                         color: AppTheme.grey),
@@ -428,9 +428,9 @@ class _PlantTreeScreenState extends State<PlantTreeScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          TextField(
+          const TextField(
             maxLines: 4,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Add a description about this tree...',
               prefixIcon: Icon(Icons.description_outlined,
                   color: AppTheme.grey),
@@ -608,13 +608,13 @@ class _PlantTreeScreenState extends State<PlantTreeScreen> {
   }
 
   Widget _buildSuccessStep() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('🌱', style: TextStyle(fontSize: 80)),
-          const SizedBox(height: 24),
-          const Text(
+          Text('🌱', style: TextStyle(fontSize: 80)),
+          SizedBox(height: 24),
+          Text(
             'Tree Planted!',
             style: TextStyle(
               fontSize: 28,
@@ -622,8 +622,8 @@ class _PlantTreeScreenState extends State<PlantTreeScreen> {
               color: AppTheme.primaryGreen,
             ),
           ),
-          const SizedBox(height: 12),
-          const Text(
+          SizedBox(height: 12),
+          Text(
             'Thank you for making the\nworld greener!',
             style: TextStyle(color: AppTheme.grey, fontSize: 16),
             textAlign: TextAlign.center,

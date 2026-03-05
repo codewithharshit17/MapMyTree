@@ -50,7 +50,7 @@ class _MapScreenState extends State<MapScreen> {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 12,
                               offset: const Offset(0, 3),
                             ),
@@ -82,7 +82,7 @@ class _MapScreenState extends State<MapScreen> {
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primary.withOpacity(0.35),
+                            color: AppTheme.primary.withValues(alpha: 0.35),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -138,7 +138,7 @@ class _MapScreenState extends State<MapScreen> {
                     borderRadius: BorderRadius.circular(18),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -252,7 +252,7 @@ class _MapScreenState extends State<MapScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primary.withOpacity(0.3),
+                  color: AppTheme.primary.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
@@ -277,7 +277,7 @@ class _MapScreenState extends State<MapScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 8,
             ),
           ],
@@ -323,7 +323,7 @@ class _MapPainter extends CustomPainter {
 
     // Parks / green areas
     final parkPaint = Paint()
-      ..color = const Color(0xFFA5D6A7).withOpacity(0.6)
+      ..color = const Color(0xFFA5D6A7).withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
 
     canvas.drawRRect(
@@ -344,7 +344,7 @@ class _MapPainter extends CustomPainter {
 
     // Buildings
     final buildPaint = Paint()
-      ..color = const Color(0xFFBDBDBD).withOpacity(0.3)
+      ..color = const Color(0xFFBDBDBD).withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
 
     final buildings = [
@@ -363,7 +363,7 @@ class _MapPainter extends CustomPainter {
     }
 
     // Water feature
-    final waterPaint = Paint()..color = const Color(0xFFB3E5FC).withOpacity(0.7);
+    final waterPaint = Paint()..color = const Color(0xFFB3E5FC).withValues(alpha: 0.7);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(size.width * 0.7, size.height * 0.33, size.width * 0.28, size.height * 0.15),
