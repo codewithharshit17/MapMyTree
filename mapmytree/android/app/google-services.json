@@ -12,7 +12,20 @@
           "package_name": "com.example.mapmytree"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "190261415345-hhoq0l1d4ol0cmfso20hdmaq95quphcq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mapmytree",
+            "certificate_hash": "4f5f8fc129fcab57a326c8874a58d6d65544268e"
+          }
+        },
+        {
+          "client_id": "190261415345-c5ap5ba7o1ngjc6uop9jf4eu7mh74ri6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBCMZSMTDtof6LFkKm2VqJCP3JxpUbFoX8"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "190261415345-c5ap5ba7o1ngjc6uop9jf4eu7mh74ri6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
