@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "190261415345",
+    "project_id": "mapmytree-22b03",
+    "storage_bucket": "mapmytree-22b03.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:190261415345:android:40526b37f91b8bc3f58190",
+        "android_client_info": {
+          "package_name": "com.example.mapmytree"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "190261415345-hhoq0l1d4ol0cmfso20hdmaq95quphcq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mapmytree",
+            "certificate_hash": "4f5f8fc129fcab57a326c8874a58d6d65544268e"
+          }
+        },
+        {
+          "client_id": "190261415345-c5ap5ba7o1ngjc6uop9jf4eu7mh74ri6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCMZSMTDtof6LFkKm2VqJCP3JxpUbFoX8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "190261415345-c5ap5ba7o1ngjc6uop9jf4eu7mh74ri6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'onboarding_screen.dart';
-import '../app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -109,10 +108,10 @@ class _SplashScreenState extends State<SplashScreen>
                     width: 110,
                     height: 110,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
+                        color: Colors.white.withValues(alpha: 0.3),
                         width: 2,
                       ),
                     ),
@@ -146,7 +145,7 @@ class _SplashScreenState extends State<SplashScreen>
                         Text(
                           'Map. Track. Protect.',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.75),
+                            color: Colors.white.withValues(alpha: 0.75),
                             fontSize: 16,
                             fontWeight: FontWeight.w400,
                             letterSpacing: 2.5,
@@ -165,7 +164,7 @@ class _SplashScreenState extends State<SplashScreen>
                     height: 36,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                     ),
                   ),
                 ),

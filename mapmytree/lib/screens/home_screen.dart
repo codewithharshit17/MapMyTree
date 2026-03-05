@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
+                    const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -58,8 +58,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        const Text(
+                        SizedBox(height: 2),
+                        Text(
                           'MapMyTree',
                           style: TextStyle(
                             color: AppTheme.textPrimary,
@@ -83,9 +83,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             // Stats row
-            SliverToBoxAdapter(
+            const SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                padding: EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Row(
                   children: [
                     Expanded(
@@ -96,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppTheme.primary,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: StatCard(
                         label: 'CO₂ Offset',
@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppTheme.teal,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: StatCard(
                         label: 'Contributors',
@@ -133,13 +133,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          AppTheme.primary.withOpacity(0.85),
+                          AppTheme.primary.withValues(alpha: 0.85),
                           AppTheme.primaryDark,
                         ],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primary.withOpacity(0.3),
+                          color: AppTheme.primary.withValues(alpha: 0.3),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         ),
@@ -343,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -359,7 +359,7 @@ class _GridPatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.08)
+      ..color = Colors.white.withValues(alpha: 0.08)
       ..strokeWidth = 1;
 
     const spacing = 30.0;

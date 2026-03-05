@@ -21,6 +21,7 @@ class AppTheme {
   // Missing colors required by PlantTreeScreen & AuthScreen
   static const Color offWhite = Color(0xFFF9F9F9);
   static const Color primaryGreen = primary;
+  static const Color darkGreen = primaryDark;
   static const Color lightGrey = Color(0xFFE0E0E0);
   static const Color grey = Color(0xFF9E9E9E);
   static const Color darkGrey = Color(0xFF616161);
@@ -36,7 +37,6 @@ class AppTheme {
         seedColor: primary,
         primary: primary,
         secondary: accent,
-        background: background,
         surface: surface,
       ),
       scaffoldBackgroundColor: background,
