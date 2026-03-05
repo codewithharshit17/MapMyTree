@@ -1,0 +1,30 @@
+# Firebase configuration files
+google-services.json
+**/google-services.json
+*.env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Dependencies
+node_modules/
+flutter/.packages
+pubspec.lock
+
+# Build files
+build/
+dist/
+*.apk
+*.ipa
+
+# Sensitive files
+secrets/
+.secrets/
+credentials.json
