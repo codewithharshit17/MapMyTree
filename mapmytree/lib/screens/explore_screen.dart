@@ -18,6 +18,7 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  int _navIndex = 0; // ✅ FIX (you were missing this)
 
   List<TreeModel> get filtered => TreeModel.sampleTrees
       .where((t) =>
@@ -30,9 +31,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
+
       body: Column(
         children: [
-          // Header
+          /// 🔝 HEADER
           Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -64,6 +66,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+
+                    /// 🔍 SEARCH BAR
                     Container(
                       height: 46,
                       decoration: BoxDecoration(
@@ -100,7 +104,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ),
             ),
           ),
-          // Results
+
+          /// 🌳 LIST
           Expanded(
             child: filtered.isEmpty
                 ? const Center(
@@ -138,6 +143,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
         ],
       ),
+
+      /// ➕ FAB
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(
           context,
@@ -147,13 +154,20 @@ class _ExploreScreenState extends State<ExploreScreen> {
         icon: const Icon(Icons.add_location_alt_rounded, color: Colors.white),
         label: const Text(
           'Add Tree',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.centerDocked,
+
+      /// 🔻 BOTTOM NAV (CORRECT WAY)
       bottomNavigationBar: BottomNav(
-        currentIndex: 2,
-        onTap: widget.onNavTap,
+        currentIndex: _navIndex,
+        onTap: (i) {
+          widget.onNavTap(i); // ✅ ALWAYS CALL THIS
+          setState(() => _navIndex = i);
+        },
       ),
     );
   }
