@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/splash_screen.dart';
 import 'app_theme.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'providers/auth_provider.dart';
+import 'providers/ngo_dashboard_provider.dart';
+
+// TODO: Replace these with your actual Supabase project values from:
+// Supabase Dashboard → Project Settings → API
+const String _supabaseUrl = 'https://mkghlxbdwnigpjfvomgb.supabase.co';
+const String _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZ2hseGJkd25pZ3BqZnZvbWdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNzkzMzMsImV4cCI6MjA4OTg1NTMzM30.coP_jg5OwuwYtFheJ1kkDcHBRwXXusVlwg0pyrEPh1s';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Try to initialize Firebase.
-  // This might fail if the user hasn't run 'flutterfire configure' yet.
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    debugPrint('Firebase Initialization failed. Have you run flutterfire configure? Error: $e');
-  }
+
+  await Supabase.initialize(
+    url: _supabaseUrl,
+    anonKey: _supabaseAnonKey,
+  );
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -21,7 +26,16 @@ void main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
-  runApp(const MapMyTreeApp());
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppAuthProvider()),
+        ChangeNotifierProvider(create: (_) => NgoDashboardProvider()),
+      ],
+      child: const MapMyTreeApp(),
+    ),
+  );
 }
 
 class MapMyTreeApp extends StatelessWidget {

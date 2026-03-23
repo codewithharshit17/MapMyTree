@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import 'onboarding_screen.dart';
+import 'home_screen.dart';
+import 'ngo_dashboard/ngo_dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -26,7 +29,6 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-
     _textController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -36,7 +38,8 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
     _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: const Interval(0, 0.5)),
+      CurvedAnimation(
+          parent: _logoController, curve: const Interval(0, 0.5)),
     );
     _textOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _textController, curve: Curves.easeIn),
@@ -48,10 +51,21 @@ class _SplashScreenState extends State<SplashScreen>
 
     _logoController.forward();
     Future.delayed(const Duration(milliseconds: 600), () {
-      _textController.forward();
+      if (mounted) _textController.forward();
     });
 
-    Timer(const Duration(seconds: 3), () {
+    _checkAuthAndNavigate();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+
+    final supabase = Supabase.instance.client;
+    final session = supabase.auth.currentSession;
+
+    if (session == null) {
+      // Not logged in
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -63,7 +77,53 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         );
       }
-    });
+    } else {
+      // Check role
+      try {
+        final data = await supabase
+            .from('users')
+            .select('role')
+            .eq('uid', session.user.id)
+            .maybeSingle();
+        final role = data?['role'] ?? 'user';
+
+        if (!mounted) return;
+
+        if (role == 'ngo') {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => const NgoDashboardScreen(),
+              transitionsBuilder: (_, anim, __, child) =>
+                  FadeTransition(opacity: anim, child: child),
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => const HomeScreen(),
+              transitionsBuilder: (_, anim, __, child) =>
+                  FadeTransition(opacity: anim, child: child),
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+          );
+        }
+      } catch (_) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => const HomeScreen(),
+              transitionsBuilder: (_, anim, __, child) =>
+                  FadeTransition(opacity: anim, child: child),
+              transitionDuration: const Duration(milliseconds: 500),
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -94,15 +154,12 @@ class _SplashScreenState extends State<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
                 AnimatedBuilder(
                   animation: _logoController,
                   builder: (_, child) => Opacity(
                     opacity: _logoOpacity.value,
                     child: Transform.scale(
-                      scale: _logoScale.value,
-                      child: child,
-                    ),
+                        scale: _logoScale.value, child: child),
                   ),
                   child: Container(
                     width: 110,
@@ -116,15 +173,11 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
                     child: const Center(
-                      child: Text(
-                        '🌳',
-                        style: TextStyle(fontSize: 58),
-                      ),
+                      child: Text('🌳', style: TextStyle(fontSize: 58)),
                     ),
                   ),
                 ),
                 const SizedBox(height: 28),
-                // App Name
                 FadeTransition(
                   opacity: _textOpacity,
                   child: SlideTransition(
@@ -147,7 +200,6 @@ class _SplashScreenState extends State<SplashScreen>
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.75),
                             fontSize: 16,
-                            fontWeight: FontWeight.w400,
                             letterSpacing: 2.5,
                           ),
                         ),
@@ -156,7 +208,6 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
                 const SizedBox(height: 80),
-                // Loading
                 FadeTransition(
                   opacity: _textOpacity,
                   child: SizedBox(

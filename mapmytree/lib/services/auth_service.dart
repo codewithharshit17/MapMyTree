@@ -1,77 +1,166 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../models/user_model.dart';
+import '../models/ngo_model.dart';
 
 class AuthService {
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email'],
-  );
-
-  // Email Sign Up
-  Future<User?> signUpWithEmail(String name, String email, String password) async {
+  // --- USER SIGN UP ---
+  Future<User?> signUpUserWithEmail({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
     try {
-      UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(
+      final res = await _supabase.auth.signUp(
         email: email,
         password: password,
+        data: {'name': name, 'role': 'user'},
       );
-      // Update display name
-      await userCredential.user?.updateDisplayName(name);
-      return userCredential.user;
+      // The backend Postgres Trigger will now automatically create the public.users row.
+      return res.user;
     } catch (e) {
-      debugPrint("Sign up error: $e");
+      debugPrint('User sign up error: $e');
       rethrow;
     }
   }
 
-  // Email Login
+  // --- NGO SIGN UP ---
+  Future<User?> signUpNgoWithEmail({
+    required String ngoName,
+    required String registrationNumber,
+    required String contactEmail,
+    required String contactPhone,
+    required String address,
+    required String password,
+  }) async {
+    try {
+      final res = await _supabase.auth.signUp(
+        email: contactEmail,
+        password: password,
+        data: {
+          'name': ngoName,
+          'role': 'ngo',
+          'registration_number': registrationNumber,
+          'contact_phone': contactPhone,
+          'address': address,
+        },
+      );
+      // The backend Postgres Trigger will now automatically create the public.users and public.ngos rows.
+      return res.user;
+    } catch (e) {
+      debugPrint('NGO sign up error: $e');
+      rethrow;
+    }
+  }
+
+  // --- EMAIL SIGN IN ---
   Future<User?> signInWithEmail(String email, String password) async {
     try {
-      UserCredential userCredential =
-          await _auth.signInWithEmailAndPassword(
+      final res = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
-      return userCredential.user;
+      return res.user;
     } catch (e) {
-      debugPrint("Sign in error: $e");
+      debugPrint('Sign in error: $e');
       rethrow;
     }
   }
 
-  // Google Login
-  Future<User?> signInWithGoogle() async {
+  // --- GOOGLE SIGN IN (NATIVE) ---
+  Future<void> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
+      final webClientId = dotenv.env['WEB_CLIENT_ID'];
 
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+      await GoogleSignIn.instance.initialize(
+        clientId: kIsWeb ? webClientId : null, // Needed for Web
+        serverClientId: webClientId, // Needed for Android to get idToken
       );
 
-      final UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
+      final googleUser = await GoogleSignIn.instance.authenticate();
+      final googleAuth = googleUser.authentication;
+      final idToken = googleAuth.idToken;
 
-      return userCredential.user;
+      if (idToken == null) {
+        throw 'No ID Token found.';
+      }
+
+      await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+      );
     } catch (e) {
-      debugPrint("Google sign in error: $e");
+      debugPrint('Native Google sign in error: $e');
       rethrow;
     }
   }
 
-  // Logout
-  Future<void> signOut() async {
+  // --- GET USER ROLE ---
+  Future<String> getUserRole(String uid) async {
     try {
-      await _auth.signOut();
-      await _googleSignIn.signOut();
+      final data = await _supabase
+          .from('users')
+          .select('role')
+          .eq('uid', uid)
+          .maybeSingle();
+      return data?['role'] ?? 'user';
     } catch (e) {
-      debugPrint("Sign out error: $e");
+      return 'user';
     }
   }
+
+  // --- GET USER MODEL ---
+  Future<UserModel?> getUserModel(String uid) async {
+    try {
+      final data = await _supabase
+          .from('users')
+          .select()
+          .eq('uid', uid)
+          .maybeSingle();
+      if (data != null) return UserModel.fromJson(data);
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // --- GET NGO MODEL ---
+  Future<NgoModel?> getNgoModel(String uid) async {
+    try {
+      final data = await _supabase
+          .from('ngos')
+          .select()
+          .eq('uid', uid)
+          .maybeSingle();
+      if (data != null) return NgoModel.fromJson(data);
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // --- RESET PASSWORD ---
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _supabase.auth.resetPasswordForEmail(email);
+  }
+
+  // --- SIGN OUT ---
+  Future<void> signOut() async {
+    await _supabase.auth.signOut();
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (e) {
+      debugPrint('Google Sign Out error: $e');
+    }
+  }
+
+  // --- CURRENT USER ---
+  User? get currentUser => _supabase.auth.currentUser;
+
+  Stream<AuthState> get authStateChanges =>
+      _supabase.auth.onAuthStateChange;
 }
