@@ -12,34 +12,36 @@ MapMyTree is a beautiful Flutter-based mobile application designed to gamify tre
 
 ## Prerequisites 🛠️
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure you have the following installed and configured:
 *   [Flutter SDK](https://flutter.dev/docs/get-started/install) (version `>=3.0.0 <4.0.0`)
 *   [Dart SDK](https://dart.dev/get-dart)
-*   An IDE like [VS Code](https://code.visualstudio.com/) or [Android Studio](https://developer.android.com/studio)
-*   An Android Emulator or physical device for testing
+*   A **[Supabase](https://supabase.com/)** Project (Free Tier) to host the PostgreSQL database and Auth layer.
+*   A **Google Cloud** Project with an OAuth 2.0 Web Client ID (for Google Sign-In).
 
 ## Getting Started 🏃‍♂️
 
-Follow these steps to get the project running on your local machine:
+Follow these steps to get the full-stack project running on your local machine:
 
 1.  **Clone the repository:**
     ```bash
     git clone https://github.com/codewithharshit17/MapMyTree.git
-    ```
-
-2.  **Navigate to the project directory:**
-    ```bash
     cd MapMyTree/mapmytree
     ```
 
-3.  **Install dependencies:**
-    ```bash
-    flutter pub get
+2.  **Environment Variables (`.env`):**
+    For security, API keys are excluded from source control. Create a `.env` file in the `mapmytree` root:
+    ```env
+    SUPABASE_URL=your_supabase_url
+    SUPABASE_ANON_KEY=your_supabase_anon_key
+    WEB_CLIENT_ID=your_google_web_client_id
     ```
 
-4.  **Run the application:**
-    Ensure your emulator is running or device is connected, then execute:
+3.  **Database Setup:**
+    Run the provided SQL Schema script directly in your Supabase Dashboard's SQL Editor to automatically spin up the `users`, `ngos`, and `trees` tables and configure all Row Level Security triggers. (Ensure Email auth and Google Auth are strictly enabled).
+
+4.  **Install dependencies & Run:**
     ```bash
+    flutter pub get
     flutter run
     ```
 

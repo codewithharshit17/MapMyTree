@@ -26,6 +26,21 @@ A beautiful Flutter recreation of the MapMyTree Mobile App UI, originally design
 ### Prerequisites
 - Flutter SDK 3.0+
 - Dart SDK 3.0+
+- A [Supabase](https://supabase.com) Account (Free Tier is fine)
+- A Google Cloud Platform project with OAuth 2.0 Web Client ID configured
+
+### Backend Setup (Supabase)
+1. Provide a Postgres database by creating a new Supabase project.
+2. Under **SQL Editor**, run the provided schema to create the `users`, `ngos`, `trees`, and `sponsorship_requests` tables, along with Row Level Security (RLS) policies and automatic user creation triggers.
+3. Under **Authentication > Providers**, enable Email/Password (ensure "Confirm email" is disabled for immediate testing) and Google Sign-In (using your Web Client ID).
+
+### Environment Variables
+For security, this project uses `flutter_dotenv`. Create a `.env` file in the root of the `mapmytree` directory:
+```env
+SUPABASE_URL=your_project_url_here
+SUPABASE_ANON_KEY=your_anon_key_here
+WEB_CLIENT_ID=your_google_web_client_id_here
+```
 
 ### Font Setup
 Download the **Nunito** font from [Google Fonts](https://fonts.google.com/specimen/Nunito) and place the font files in a `fonts/` directory:
@@ -48,40 +63,48 @@ flutter run
 
 ```
 lib/
-├── main.dart                    # Entry point
+├── main.dart                    # Entry point & Supabase init
 ├── app_theme.dart               # Color palette & theme
-├── models/
-│   └── tree_model.dart          # Tree data model
+├── providers/                   # State management
+│   ├── auth_provider.dart       # Supabase Auth state watcher
+│   └── ngo_dashboard_provider.dart # Dashboard State management
+├── models/                      # Supabase Postgres Models
+│   ├── tree_model.dart          
+│   ├── user_model.dart
+│   └── ngo_model.dart           
 ├── screens/
-│   ├── splash_screen.dart       # Animated splash
-│   ├── onboarding_screen.dart   # 3-step onboarding
+│   ├── splash_screen.dart       # Animated splash & Auth redirect
+│   ├── auth_screen.dart         # Login UI (Supabase Email & Native Google Sign-In)
 │   ├── home_screen.dart         # Main dashboard
 │   ├── map_screen.dart          # Map view
 │   ├── explore_screen.dart      # Search & browse
 │   ├── tree_detail_screen.dart  # Tree info detail
-│   └── profile_screen.dart      # User profile
-└── widgets/
-    ├── tree_card.dart           # Tree list card
-    ├── stat_card.dart           # Stat summary card
-    └── bottom_nav.dart          # Bottom navigation bar
+│   └── ngo_dashboard/           # Comprehensive NGO Management portal
+└── services/
+    ├── auth_service.dart        # Supabase API logic
+    ├── tree_service.dart        # CRUD for public.trees
+    └── ngo_service.dart         # Real-time Requests
 ```
 
 ## 🌍 Features
 
 - 🗺️ **Interactive Map View** — Custom-painted map with tree pin markers
 - 🌱 **Tree Catalogue** — Browse and search all mapped trees
-- 📊 **Health Tracking** — Visual health score with progress bars
+- 🏢 **NGO Dashboard** — A complete portal for NGOs to track progress, approve sponsorships, and measure carbon offsets.
+- 🔐 **Robust Authentication** — Supabase Auth integrated with native Google Sign-in v7 APIs.
+- 📊 **Health & Analytics Tracking** — Visual health scores and real-time backend analytical charts.
 - 📍 **Tree Detail** — Full info: species, CO₂ offset, age, planting history
-- 🎯 **Category Filters** — Filter by tree type (Oak, Maple, Flowering, etc.)
-- 👤 **Profile & Badges** — Track personal impact and achievements
 
 ## 📦 Dependencies
 
-Only standard Flutter packages — no third-party map SDK required:
-- `flutter` (SDK)
-- `cupertino_icons`
+This app utilizes a modern Flutter stack:
+- `supabase_flutter` — Complete Backend-as-a-Service integration
+- `google_sign_in` — Native Google OAuth authentication
+- `provider` — Predictable state management
+- `flutter_dotenv` — API Key security
+- `fl_chart` — Analytics data visualization
+- `google_fonts` — Dynamic typography
 
-The map is rendered using Flutter's `CustomPainter` for a dependency-free implementation.
 
 ---
 
