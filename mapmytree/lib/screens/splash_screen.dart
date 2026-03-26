@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
+import '../core/dev_session.dart';
 import 'onboarding_screen.dart';
-import 'home_screen.dart';
-import 'ngo_dashboard/ngo_dashboard_screen.dart';
+
+import 'ngo/ngo_shell_screen.dart';
+import 'user/user_shell_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -61,6 +63,17 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
 
+    if (DevSession().isActive) {
+      if (DevSession().userRole == 'ngo') {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (_) => const NgoShellScreen()));
+      } else {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (_) => const UserShellScreen()));
+      }
+      return;
+    }
+
     final supabase = Supabase.instance.client;
     final session = supabase.auth.currentSession;
 
@@ -93,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen>
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const NgoDashboardScreen(),
+              pageBuilder: (_, __, ___) => const NgoShellScreen(),
               transitionsBuilder: (_, anim, __, child) =>
                   FadeTransition(opacity: anim, child: child),
               transitionDuration: const Duration(milliseconds: 500),
@@ -103,7 +116,7 @@ class _SplashScreenState extends State<SplashScreen>
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const HomeScreen(),
+              pageBuilder: (_, __, ___) => const UserShellScreen(),
               transitionsBuilder: (_, anim, __, child) =>
                   FadeTransition(opacity: anim, child: child),
               transitionDuration: const Duration(milliseconds: 500),
@@ -115,7 +128,7 @@ class _SplashScreenState extends State<SplashScreen>
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const HomeScreen(),
+              pageBuilder: (_, __, ___) => const UserShellScreen(),
               transitionsBuilder: (_, anim, __, child) =>
                   FadeTransition(opacity: anim, child: child),
               transitionDuration: const Duration(milliseconds: 500),

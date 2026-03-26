@@ -2,8 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../models/user_model.dart';
-import '../models/ngo_model.dart';
+import '../models/profile_model.dart';
 
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -103,9 +102,9 @@ class AuthService {
   Future<String> getUserRole(String uid) async {
     try {
       final data = await _supabase
-          .from('users')
+          .from('profiles')
           .select('role')
-          .eq('uid', uid)
+          .eq('id', uid)
           .maybeSingle();
       return data?['role'] ?? 'user';
     } catch (e) {
@@ -113,30 +112,15 @@ class AuthService {
     }
   }
 
-  // --- GET USER MODEL ---
-  Future<UserModel?> getUserModel(String uid) async {
+  // --- GET PROFILE MODEL ---
+  Future<ProfileModel?> getProfileModel(String uid) async {
     try {
       final data = await _supabase
-          .from('users')
+          .from('profiles')
           .select()
-          .eq('uid', uid)
+          .eq('id', uid)
           .maybeSingle();
-      if (data != null) return UserModel.fromJson(data);
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // --- GET NGO MODEL ---
-  Future<NgoModel?> getNgoModel(String uid) async {
-    try {
-      final data = await _supabase
-          .from('ngos')
-          .select()
-          .eq('uid', uid)
-          .maybeSingle();
-      if (data != null) return NgoModel.fromJson(data);
+      if (data != null) return ProfileModel.fromJson(data);
       return null;
     } catch (e) {
       return null;

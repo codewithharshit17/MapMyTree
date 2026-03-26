@@ -5,7 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/splash_screen.dart';
 import 'app_theme.dart';
 import 'providers/auth_provider.dart';
-import 'providers/ngo_dashboard_provider.dart';
+import 'screens/auth_screen.dart';
+import 'screens/ngo/ngo_shell_screen.dart';
+import 'screens/user/user_shell_screen.dart';
 
 // TODO: Replace these with your actual Supabase project values from:
 // Supabase Dashboard → Project Settings → API
@@ -31,7 +33,6 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppAuthProvider()),
-        ChangeNotifierProvider(create: (_) => NgoDashboardProvider()),
       ],
       child: const MapMyTreeApp(),
     ),
@@ -48,6 +49,11 @@ class MapMyTreeApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const SplashScreen(),
+      routes: {
+        '/auth': (context) => const AuthScreen(),
+        '/ngo-dashboard': (context) => const NgoShellScreen(),
+        '/user-dashboard': (context) => const UserShellScreen(),
+      },
     );
   }
 }

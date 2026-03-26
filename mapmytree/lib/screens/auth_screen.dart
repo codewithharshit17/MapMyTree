@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_theme.dart';
 import '../services/auth_service.dart';
-import 'home_screen.dart';
-import 'ngo_dashboard/ngo_dashboard_screen.dart';
+import '../core/dev_session.dart';
+import 'ngo/ngo_shell_screen.dart';
+import 'user/user_shell_screen.dart';
 
 enum AuthMode { login, userSignup, ngoSignup }
 
@@ -88,7 +89,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const NgoDashboardScreen(),
+          pageBuilder: (_, __, ___) => const NgoShellScreen(),
           transitionsBuilder: (_, anim, __, child) =>
               FadeTransition(opacity: anim, child: child),
           transitionDuration: const Duration(milliseconds: 500),
@@ -98,7 +99,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const HomeScreen(),
+          pageBuilder: (_, __, ___) => const UserShellScreen(),
           transitionsBuilder: (_, anim, __, child) =>
               FadeTransition(opacity: anim, child: child),
           transitionDuration: const Duration(milliseconds: 500),
@@ -545,19 +546,63 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
 
   Widget _buildBottomToggle() {
     if (_mode == AuthMode.login) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text("Don't have an account? ",
-              style: TextStyle(color: AppTheme.grey, fontSize: 13)),
-          GestureDetector(
-            onTap: () => _switchMode(AuthMode.userSignup),
-            child: const Text('Sign Up',
-                style: TextStyle(color: Color(0xFF1B4332),
-                    fontWeight: FontWeight.bold, fontSize: 13)),
+      return Column(children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("Don't have an account? ",
+                style: TextStyle(color: AppTheme.grey, fontSize: 13)),
+            GestureDetector(
+              onTap: () => _switchMode(AuthMode.userSignup),
+              child: const Text('Sign Up',
+                  style: TextStyle(color: Color(0xFF1B4332),
+                      fontWeight: FontWeight.bold, fontSize: 13)),
+            ),
+          ],
+        ),
+        // TODO: REMOVE BEFORE PRODUCTION
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+          child: Column(
+            children: [
+              const Divider(),
+              const Text('🧪 Dev Testing Only', style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
+                      onPressed: () {
+                        DevSession().loginAsNGO();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const NgoShellScreen()),
+                        );
+                      },
+                      child: const Text('Login as NGO', style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700]),
+                      onPressed: () {
+                        DevSession().loginAsUser();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const UserShellScreen()),
+                        );
+                      },
+                      child: const Text('Login as User', style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      );
+        ),
+      ]);
     } else {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,

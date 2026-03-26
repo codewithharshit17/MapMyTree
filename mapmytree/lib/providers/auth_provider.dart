@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
-import '../models/user_model.dart';
-import '../models/ngo_model.dart';
+import '../models/profile_model.dart';
 
 enum AuthStatus { unknown, unauthenticated, userAuthenticated, ngoAuthenticated }
 
@@ -10,12 +9,10 @@ class AppAuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
 
   AuthStatus _status = AuthStatus.unknown;
-  UserModel? _userModel;
-  NgoModel? _ngoModel;
+  ProfileModel? _profile;
 
   AuthStatus get status => _status;
-  UserModel? get userModel => _userModel;
-  NgoModel? get ngoModel => _ngoModel;
+  ProfileModel? get profile => _profile;
   bool get isNgo => _status == AuthStatus.ngoAuthenticated;
   bool get isLoggedIn =>
       _status == AuthStatus.userAuthenticated ||
@@ -38,20 +35,17 @@ class AppAuthProvider extends ChangeNotifier {
   Future<void> _onAuthStateChanged(User? supabaseUser) async {
     if (supabaseUser == null) {
       _status = AuthStatus.unauthenticated;
-      _userModel = null;
-      _ngoModel = null;
+      _profile = null;
       notifyListeners();
       return;
     }
 
     final role = await _authService.getUserRole(supabaseUser.id);
-    _userModel = await _authService.getUserModel(supabaseUser.id);
+    _profile = await _authService.getProfileModel(supabaseUser.id);
 
     if (role == 'ngo') {
-      _ngoModel = await _authService.getNgoModel(supabaseUser.id);
       _status = AuthStatus.ngoAuthenticated;
     } else {
-      _ngoModel = null;
       _status = AuthStatus.userAuthenticated;
     }
 
@@ -65,10 +59,7 @@ class AppAuthProvider extends ChangeNotifier {
   Future<void> refreshUserData() async {
     final user = _authService.currentUser;
     if (user != null) {
-      _userModel = await _authService.getUserModel(user.id);
-      if (_userModel?.isNgo == true) {
-        _ngoModel = await _authService.getNgoModel(user.id);
-      }
+      _profile = await _authService.getProfileModel(user.id);
       notifyListeners();
     }
   }

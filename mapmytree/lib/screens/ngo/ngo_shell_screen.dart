@@ -1,46 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../screens/auth_screen.dart';
-import 'ngo_overview_tab.dart';
+import '../../core/dev_session.dart';
+import '../../core/session_helper.dart';
+import '../auth_screen.dart';
+import 'ngo_dashboard_tab.dart';
+import 'add_tree_screen.dart';
+import 'ngo_map_screen.dart';
 import 'ngo_requests_tab.dart';
-import 'ngo_trees_tab.dart';
-import 'ngo_analytics_tab.dart';
 
-class NgoDashboardScreen extends StatefulWidget {
-  const NgoDashboardScreen({super.key});
+class NgoShellScreen extends StatefulWidget {
+  const NgoShellScreen({super.key});
 
   @override
-  State<NgoDashboardScreen> createState() => _NgoDashboardScreenState();
+  State<NgoShellScreen> createState() => _NgoShellScreenState();
 }
 
-class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
+class _NgoShellScreenState extends State<NgoShellScreen> {
   int _currentTab = 0;
 
   static const List<_TabConfig> _tabs = [
     _TabConfig(
         icon: Icons.dashboard_outlined,
         activeIcon: Icons.dashboard,
-        label: 'Overview'),
+        label: 'Dashboard'),
+    _TabConfig(
+        icon: Icons.add_circle_outline,
+        activeIcon: Icons.add_circle,
+        label: 'Add Tree'),
+    _TabConfig(
+        icon: Icons.map_outlined,
+        activeIcon: Icons.map,
+        label: 'Map'),
     _TabConfig(
         icon: Icons.inbox_outlined,
         activeIcon: Icons.inbox,
         label: 'Requests'),
-    _TabConfig(
-        icon: Icons.park_outlined,
-        activeIcon: Icons.park,
-        label: 'Trees'),
-    _TabConfig(
-        icon: Icons.bar_chart_outlined,
-        activeIcon: Icons.bar_chart,
-        label: 'Analytics'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AppAuthProvider>();
-    final ngo = authProvider.ngoModel;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F5),
       appBar: AppBar(
@@ -53,7 +50,9 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
             const Text('MapMyTree NGO',
                 style: TextStyle(fontSize: 12, color: Colors.white70)),
             Text(
-              ngo?.ngoName ?? 'Dashboard',
+              SessionHelper.userName.isNotEmpty
+                  ? SessionHelper.userName
+                  : 'Dashboard',
               style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -62,26 +61,6 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
           ],
         ),
         actions: [
-          // Verification badge
-          if (ngo != null)
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: ngo.isVerified
-                    ? Colors.green.shade700
-                    : Colors.orange.shade700,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                ngo.isVerified ? '✓ Verified' : '⏳ Pending',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600),
-              ),
-            ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
@@ -91,23 +70,24 @@ class _NgoDashboardScreenState extends State<NgoDashboardScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              final navigator = Navigator.of(context);
-              await authProvider.signOut();
-              navigator.pushReplacement(
-                  MaterialPageRoute(builder: (_) => const AuthScreen()));
+            onPressed: () {
+              DevSession().clear();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const AuthScreen()),
+                (route) => false,
+              );
             },
-
           ),
         ],
       ),
       body: IndexedStack(
         index: _currentTab,
         children: const [
-          NgoOverviewTab(),
+          NgoDashboardTab(),
+          AddTreeScreen(),
+          NgoMapScreen(),
           NgoRequestsTab(),
-          NgoTreesTab(),
-          NgoAnalyticsTab(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
