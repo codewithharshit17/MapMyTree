@@ -1,59 +1,111 @@
-# MapMyTree 🌳
+# 🌳 MapMyTree - Flutter App
 
-MapMyTree is a beautiful Flutter-based mobile application designed to gamify tree planting and carbon footprint tracking. Plant trees, map them to your location, and watch your eco-contributions grow!
+A beautiful Flutter recreation of the MapMyTree Mobile App UI, originally designed in Figma.
 
-## Features 🚀
+## ✨ Screens
 
-*   **Interactive Map:** View your local area and see where trees have been planted by you and the community.
-*   **Plant a Tree:** A seamless, multi-step form to log newly planted trees, including species selection, geolocation, details, and optional photo uploads.
-*   **Tree Details & Health:** View comprehensive stats about each mapped tree, including height, age, carbon offset, and health score.
-*   **User Profiles & Achievements:** Track your personal eco-journey, earn badges, and monitor your personal CO2 offset.
-*   **Modern Aesthetics:** A premium, smooth, and vibrant user interface built with Flutter.
+| Screen | Description |
+|--------|-------------|
+| **Splash Screen** | Animated logo reveal with elastic spring effect |
+| **Onboarding** | 3-page swipeable introduction with dot indicators |
+| **Home** | Dashboard with stats, map preview, category filters, and tree list |
+| **Map Screen** | Interactive map view with custom-painted terrain and tree pins |
+| **Explore** | Searchable tree list with real-time filtering |
+| **Tree Detail** | Full tree info with health bar, stats grid, and tabs |
+| **Profile** | User stats, achievements, and settings menu |
 
-## Prerequisites 🛠️
+## 🎨 Design
 
-Before you begin, ensure you have the following installed and configured:
-*   [Flutter SDK](https://flutter.dev/docs/get-started/install) (version `>=3.0.0 <4.0.0`)
-*   [Dart SDK](https://dart.dev/get-dart)
-*   A **[Supabase](https://supabase.com/)** Project (Free Tier) to host the PostgreSQL database and Auth layer.
-*   A **Google Cloud** Project with an OAuth 2.0 Web Client ID (for Google Sign-In).
+- **Color Palette**: Deep forest greens (`#1B5E20`, `#2E7D32`, `#558B2F`) with teal and orange accents
+- **Typography**: Nunito font family (weight 400–800) for organic, rounded feel
+- **Cards**: Soft shadows, rounded corners (18px radius)
+- **Animations**: Spring-based splash, slide-in text, animated category chips
 
-## Getting Started 🏃‍♂️
+## 🚀 Getting Started
 
-Follow these steps to get the full-stack project running on your local machine:
+### Prerequisites
+- Flutter SDK 3.0+
+- Dart SDK 3.0+
+- A [Supabase](https://supabase.com) Account (Free Tier is fine)
+- A Google Cloud Platform project with OAuth 2.0 Web Client ID configured
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/codewithharshit17/MapMyTree.git
-    cd MapMyTree/mapmytree
-    ```
+### Backend Setup (Supabase)
+1. Provide a Postgres database by creating a new Supabase project.
+2. Under **SQL Editor**, run the provided schema to create the `users`, `ngos`, `trees`, and `sponsorship_requests` tables, along with Row Level Security (RLS) policies and automatic user creation triggers.
+3. Under **Authentication > Providers**, enable Email/Password (ensure "Confirm email" is disabled for immediate testing) and Google Sign-In (using your Web Client ID).
 
-2.  **Environment Variables (`.env`):**
-    For security, API keys are excluded from source control. Create a `.env` file in the `mapmytree` root:
-    ```env
-    SUPABASE_URL=your_supabase_url
-    SUPABASE_ANON_KEY=your_supabase_anon_key
-    WEB_CLIENT_ID=your_google_web_client_id
-    ```
+### Environment Variables
+For security, this project uses `flutter_dotenv`. Create a `.env` file in the root of the `mapmytree` directory:
+```env
+SUPABASE_URL=your_project_url_here
+SUPABASE_ANON_KEY=your_anon_key_here
+WEB_CLIENT_ID=your_google_web_client_id_here
+```
 
-3.  **Database Setup:**
-    Run the provided SQL Schema script directly in your Supabase Dashboard's SQL Editor to automatically spin up the `users`, `ngos`, and `trees` tables and configure all Row Level Security triggers. (Ensure Email auth and Google Auth are strictly enabled).
+### Font Setup
+Download the **Nunito** font from [Google Fonts](https://fonts.google.com/specimen/Nunito) and place the font files in a `fonts/` directory:
+```
+fonts/
+├── Nunito-Regular.ttf
+├── Nunito-Medium.ttf
+├── Nunito-SemiBold.ttf
+├── Nunito-Bold.ttf
+└── Nunito-ExtraBold.ttf
+```
 
-4.  **Install dependencies & Run:**
-    ```bash
-    flutter pub get
-    flutter run
-    ```
+### Run
+```bash
+flutter pub get
+flutter run
+```
 
-## Project Structure 📁
+## 📁 Project Structure
 
-The core Flutter application code is located in the `mapmytree/lib/` directory:
-*   `/screens`: Contains all the main UI views (`home_screen.dart`, `map_screen.dart`, `plant_tree_screen.dart`, etc.)
-*   `/widgets`: Reusable UI components (`bottom_nav.dart`, `tree_card.dart`, etc.)
-*   `/models`: Data models for the application (`tree_model.dart`)
-*   `app_theme.dart`: Centralized color palettes and styling definitions.
+```
+lib/
+├── main.dart                    # Entry point & Supabase init
+├── app_theme.dart               # Color palette & theme
+├── providers/                   # State management
+│   ├── auth_provider.dart       # Supabase Auth state watcher
+│   └── ngo_dashboard_provider.dart # Dashboard State management
+├── models/                      # Supabase Postgres Models
+│   ├── tree_model.dart          
+│   ├── user_model.dart
+│   └── ngo_model.dart           
+├── screens/
+│   ├── splash_screen.dart       # Animated splash & Auth redirect
+│   ├── auth_screen.dart         # Login UI (Supabase Email & Native Google Sign-In)
+│   ├── home_screen.dart         # Main dashboard
+│   ├── map_screen.dart          # Map view
+│   ├── explore_screen.dart      # Search & browse
+│   ├── tree_detail_screen.dart  # Tree info detail
+│   └── ngo_dashboard/           # Comprehensive NGO Management portal
+└── services/
+    ├── auth_service.dart        # Supabase API logic
+    ├── tree_service.dart        # CRUD for public.trees
+    └── ngo_service.dart         # Real-time Requests
+```
 
-## Built With 💙
+## 🌍 Features
 
-*   [Flutter](https://flutter.dev/) - UI toolkit for building natively compiled applications for mobile, web, and desktop.
-*   [Google Fonts](https://pub.dev/packages/google_fonts) - Dynamic typography (Nunito).
+- 🗺️ **Interactive Map View** — Custom-painted map with tree pin markers
+- 🌱 **Tree Catalogue** — Browse and search all mapped trees
+- 🏢 **NGO Dashboard** — A complete portal for NGOs to track progress, approve sponsorships, and measure carbon offsets.
+- 🔐 **Robust Authentication** — Supabase Auth integrated with native Google Sign-in v7 APIs.
+- 📊 **Health & Analytics Tracking** — Visual health scores and real-time backend analytical charts.
+- 📍 **Tree Detail** — Full info: species, CO₂ offset, age, planting history
+
+## 📦 Dependencies
+
+This app utilizes a modern Flutter stack:
+- `supabase_flutter` — Complete Backend-as-a-Service integration
+- `google_sign_in` — Native Google OAuth authentication
+- `provider` — Predictable state management
+- `flutter_dotenv` — API Key security
+- `fl_chart` — Analytics data visualization
+- `google_fonts` — Dynamic typography
+
+
+---
+
+> Inspired by the [Figma design](https://www.figma.com/design/4pgztiVJOIOFNZsHcQRYgG/MapMyTree-Mobile-App-UI) by codewithharshit17
