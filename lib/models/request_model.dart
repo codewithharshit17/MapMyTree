@@ -73,4 +73,13 @@ class RequestModel {
         return 'Pending';
     }
   }
+
+  /// Equality is based on [id] so DropdownButtonFormField can match items.
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RequestModel && other.id == id);
+
+  @override
+  int get hashCode => id.hashCode;
 }

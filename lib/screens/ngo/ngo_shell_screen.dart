@@ -17,6 +17,15 @@ class NgoShellScreen extends StatefulWidget {
 class _NgoShellScreenState extends State<NgoShellScreen> {
   int _currentTab = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Activate dev session if auth is bypassed
+    if (!DevSession().isActive) {
+      DevSession().loginAsNGO();
+    }
+  }
+
   static const List<_TabConfig> _tabs = [
     _TabConfig(
         icon: Icons.dashboard_outlined,

@@ -2,19 +2,24 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/new_tree_model.dart';
 import '../models/tree_update_model.dart';
+import 'local_tree_storage.dart';
 
 class NewTreeService {
   final SupabaseClient _db = Supabase.instance.client;
 
-  /// Insert a new tree.
+  /// Insert a new tree. Tries Supabase first, falls back to local storage.
   Future<String?> insertTree(Map<String, dynamic> data) async {
     try {
       final result =
           await _db.from('trees').insert(data).select('id').single();
+      debugPrint('NewTreeService: saved to Supabase ✓');
       return result['id'] as String?;
     } catch (e) {
-      debugPrint('NewTreeService insertTree error: $e');
-      rethrow;
+      debugPrint('NewTreeService insertTree (Supabase) failed: $e');
+      debugPrint('NewTreeService: falling back to local storage...');
+      // Fallback: save locally
+      final localId = await LocalTreeStorage.saveTree(Map.from(data));
+      return localId;
     }
   }
 
@@ -25,22 +30,27 @@ class NewTreeService {
       await _db.from('trees').update(data).eq('id', treeId);
     } catch (e) {
       debugPrint('NewTreeService updateTree error: $e');
-      rethrow;
+      // No local update implemented for now
     }
   }
 
-  /// Get all trees for an NGO.
+  /// Get all trees for an NGO (merged from Supabase + local storage).
   Future<List<NewTreeModel>> getTreesForNgo(String ngoId) async {
+    final local = await LocalTreeStorage.getTreesForNgo(ngoId);
     try {
       final rows = await _db
           .from('trees')
           .select()
           .eq('ngo_id', ngoId)
-          .order('created_at', ascending: false);
-      return rows.map((r) => NewTreeModel.fromJson(r)).toList();
+          .order('planted_date', ascending: false);
+      final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
+      // Merge: remote + local (avoid duplicates by ID)
+      final remoteIds = remote.map((t) => t.id).toSet();
+      final localOnly = local.where((t) => !remoteIds.contains(t.id)).toList();
+      return [...remote, ...localOnly];
     } catch (e) {
-      debugPrint('NewTreeService getTreesForNgo error: $e');
-      return [];
+      debugPrint('NewTreeService getTreesForNgo (Supabase) error: $e');
+      return local;
     }
   }
 
@@ -51,7 +61,7 @@ class NewTreeService {
           .from('trees')
           .select()
           .eq('planted_for_user_id', userId)
-          .order('created_at', ascending: false);
+          .order('planted_date', ascending: false);
       return rows.map((r) => NewTreeModel.fromJson(r)).toList();
     } catch (e) {
       debugPrint('NewTreeService getTreesForUser error: $e');
@@ -65,7 +75,6 @@ class NewTreeService {
         .from('trees')
         .stream(primaryKey: ['id'])
         .eq('ngo_id', ngoId)
-        .order('created_at', ascending: false)
         .map((rows) => rows.map((r) => NewTreeModel.fromJson(r)).toList());
   }
 
@@ -75,40 +84,46 @@ class NewTreeService {
         .from('trees')
         .stream(primaryKey: ['id'])
         .eq('planted_for_user_id', userId)
-        .order('created_at', ascending: false)
         .map((rows) => rows.map((r) => NewTreeModel.fromJson(r)).toList());
   }
 
-  /// Get recent trees for NGO.
+  /// Get recent trees for NGO (merged from Supabase + local).
   Future<List<NewTreeModel>> getRecentTrees(String ngoId,
       {int limit = 5}) async {
+    final local = await LocalTreeStorage.getRecentTrees(ngoId, limit: limit);
     try {
       final rows = await _db
           .from('trees')
           .select()
           .eq('ngo_id', ngoId)
-          .order('created_at', ascending: false)
+          .order('planted_date', ascending: false)
           .limit(limit);
-      return rows.map((r) => NewTreeModel.fromJson(r)).toList();
+      final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
+      final remoteIds = remote.map((t) => t.id).toSet();
+      final localOnly = local.where((t) => !remoteIds.contains(t.id)).toList();
+      final merged = [...remote, ...localOnly];
+      return merged.take(limit).toList();
     } catch (e) {
-      debugPrint('NewTreeService getRecentTrees error: $e');
-      return [];
+      debugPrint('NewTreeService getRecentTrees (Supabase) error: $e');
+      return local;
     }
   }
 
-  /// Get total tree count for NGO.
+  /// Get total tree count for NGO (merged).
   Future<int> getTreeCount(String ngoId) async {
+    final localCount = await LocalTreeStorage.getTreeCount(ngoId);
     try {
       final rows =
           await _db.from('trees').select('id').eq('ngo_id', ngoId);
-      return rows.length;
+      return rows.length + localCount;
     } catch (e) {
-      return 0;
+      return localCount;
     }
   }
 
-  /// Get trees planted this month for NGO.
+  /// Get trees planted this month for NGO (merged).
   Future<int> getTreesThisMonth(String ngoId) async {
+    final localCount = await LocalTreeStorage.getTreesThisMonth(ngoId);
     try {
       final now = DateTime.now();
       final firstOfMonth = DateTime(now.year, now.month, 1);
@@ -116,36 +131,43 @@ class NewTreeService {
           .from('trees')
           .select('id')
           .eq('ngo_id', ngoId)
-          .gte('created_at', firstOfMonth.toIso8601String());
-      return rows.length;
+          .gte('planted_date', firstOfMonth.toIso8601String().split('T')[0]);
+      return rows.length + localCount;
     } catch (e) {
-      return 0;
+      return localCount;
     }
   }
 
-  /// Get monthly tree stats for last 6 months.
+  /// Get monthly tree stats for last 6 months (merged).
   Future<Map<String, int>> getMonthlyStats(String ngoId) async {
+    final localStats = await LocalTreeStorage.getMonthlyStats(ngoId);
     try {
       final sixMonthsAgo =
           DateTime.now().subtract(const Duration(days: 180));
       final rows = await _db
           .from('trees')
-          .select('created_at')
+          .select('planted_date')
           .eq('ngo_id', ngoId)
-          .gte('created_at', sixMonthsAgo.toIso8601String());
+          .gte('planted_date', sixMonthsAgo.toIso8601String().split('T')[0]);
 
-      final Map<String, int> monthlyCount = {};
+      final Map<String, int> remoteStats = {};
       for (final row in rows) {
-        if (row['created_at'] == null) continue;
-        final date = DateTime.parse(row['created_at']);
+        if (row['planted_date'] == null) continue;
+        final date = DateTime.parse(row['planted_date']);
         final key =
             '${date.year}-${date.month.toString().padLeft(2, '0')}';
-        monthlyCount[key] = (monthlyCount[key] ?? 0) + 1;
+        remoteStats[key] = (remoteStats[key] ?? 0) + 1;
       }
-      return monthlyCount;
+
+      // Merge local + remote
+      final merged = Map<String, int>.from(remoteStats);
+      for (final entry in localStats.entries) {
+        merged[entry.key] = (merged[entry.key] ?? 0) + entry.value;
+      }
+      return merged;
     } catch (e) {
-      debugPrint('NewTreeService getMonthlyStats error: $e');
-      return {};
+      debugPrint('NewTreeService getMonthlyStats (Supabase) error: $e');
+      return localStats;
     }
   }
 

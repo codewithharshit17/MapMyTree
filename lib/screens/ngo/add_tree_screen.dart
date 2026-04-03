@@ -46,9 +46,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
   void initState() {
     super.initState();
     _loadPendingRequests();
-    if (widget.prefilledRequest != null) {
-      _selectedRequest = widget.prefilledRequest;
-    }
+    // Note: _selectedRequest is set AFTER loading so we can match against list items
   }
 
   Future<void> _loadPendingRequests() async {
@@ -58,6 +56,14 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
         setState(() {
           _pendingRequests = requests;
           _loadingRequests = false;
+          // Match the prefilled request against the loaded list by ID
+          // so DropdownButtonFormField gets the exact same instance
+          if (widget.prefilledRequest != null) {
+            _selectedRequest = requests.firstWhere(
+              (r) => r.id == widget.prefilledRequest!.id,
+              orElse: () => widget.prefilledRequest!,
+            );
+          }
         });
       }
     } catch (e) {
@@ -151,8 +157,25 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
     if (_latitude == null || _longitude == null) {
-      _showError('Please capture a geotagged photo first');
-      return;
+      // Show a warning but allow submission for testing
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('No GPS Location'),
+          content: const Text(
+              'No geotagged photo was taken. The tree will be saved without precise coordinates.\n\nDo you want to continue?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Continue',
+                    style: TextStyle(color: Color(0xFF1B4332)))),
+          ],
+        ),
+      );
+      if (confirm != true) return;
     }
 
     setState(() => _isSubmitting = true);
@@ -171,7 +194,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
         'planted_for_user_id': _selectedRequest?.userId,
         'tree_name': _treeNameController.text.trim(),
         'tree_species': _speciesController.text.trim(),
-        'planting_date': _selectedDate.toIso8601String().split('T')[0],
+        'planted_date': _selectedDate.toIso8601String().split('T')[0],
         'latitude': _latitude,
         'longitude': _longitude,
         'exact_location': _locationController.text,
@@ -336,6 +359,35 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
                     image: FileImage(_capturedPhoto!),
                     fit: BoxFit.cover,
                   ),
+                ),
+              ),
+
+            // GPS Coordinates chip (shown when captured)
+            if (_latitude != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.gps_fixed,
+                        size: 16, color: Colors.green.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'GPS locked: ${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green.shade700,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 

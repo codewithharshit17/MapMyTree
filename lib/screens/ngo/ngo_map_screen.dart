@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/session_helper.dart';
 import '../../models/new_tree_model.dart';
@@ -33,11 +34,19 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
             final trees = snapshot.data ?? [];
             final markers = trees.map((tree) => Marker(
               point: LatLng(tree.latitude, tree.longitude),
-              width: 40,
-              height: 40,
+              width: 32,
+              height: 32,
               child: GestureDetector(
                 onTap: () => _showTreeDetails(tree),
-                child: const Text('🌳', style: TextStyle(fontSize: 28)),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1CB572),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Text('1', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ),
               ),
             )).toList();
 
@@ -54,7 +63,30 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
                       : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.mapmytree.app',
                 ),
-                MarkerLayer(markers: markers),
+                MarkerClusterLayerWidget(
+                  options: MarkerClusterLayerOptions(
+                    maxClusterRadius: 45,
+                    size: const Size(40, 40),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.all(50),
+                    maxZoom: 15,
+                    markers: markers,
+                    builder: (context, clusterMarkers) {
+                      return Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF1CB572),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            clusterMarkers.length.toString(),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             );
           },

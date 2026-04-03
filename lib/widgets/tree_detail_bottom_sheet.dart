@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
@@ -32,11 +33,18 @@ class TreeDetailBottomSheet extends StatelessWidget {
               if (tree.firstPhotoUrl.isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: CachedNetworkImage(
-                    imageUrl: tree.firstPhotoUrl, height: 200, width: double.infinity, fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(height: 200, color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator())),
-                    errorWidget: (_, __, ___) => Container(height: 200, color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image, size: 48, color: Colors.grey))),
-                  ),
+                  child: tree.firstPhotoUrl.startsWith('local://')
+                      ? Image.file(
+                          File(tree.firstPhotoUrl.replaceFirst('local://', '')),
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
+                      : CachedNetworkImage(
+                          imageUrl: tree.firstPhotoUrl, height: 200, width: double.infinity, fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(height: 200, color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator())),
+                          errorWidget: (_, __, ___) => Container(height: 200, color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image, size: 48, color: Colors.grey))),
+                        ),
                 )
               else
                 Container(height: 120, width: double.infinity, decoration: BoxDecoration(

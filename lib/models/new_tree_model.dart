@@ -47,8 +47,8 @@ class NewTreeModel {
       plantedForUserId: json['planted_for_user_id'],
       treeName: json['tree_name'] ?? '',
       treeSpecies: json['tree_species'],
-      plantingDate: json['planting_date'] != null
-          ? DateTime.parse(json['planting_date'])
+      plantingDate: json['planted_date'] != null
+          ? DateTime.parse(json['planted_date'])
           : DateTime.now(),
       latitude: (json['latitude'] ?? 0.0).toDouble(),
       longitude: (json['longitude'] ?? 0.0).toDouble(),
@@ -76,7 +76,7 @@ class NewTreeModel {
         'planted_for_user_id': plantedForUserId,
         'tree_name': treeName,
         'tree_species': treeSpecies,
-        'planting_date': plantingDate.toIso8601String().split('T')[0],
+        'planted_date': plantingDate.toIso8601String().split('T')[0],
         'latitude': latitude,
         'longitude': longitude,
         'exact_location': exactLocation,
