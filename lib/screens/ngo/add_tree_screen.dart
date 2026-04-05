@@ -8,6 +8,7 @@ import '../../services/new_tree_service.dart';
 import '../../services/request_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/location_service.dart';
+import '../../services/exif_service.dart';
 
 class AddTreeScreen extends StatefulWidget {
   final RequestModel? prefilledRequest;
@@ -36,6 +37,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
   double? _longitude;
   bool _isSubmitting = false;
   bool _isCapturing = false;
+  String _gpsSource = ''; // 'exif' or 'device'
 
   // Request dropdown
   List<RequestModel> _pendingRequests = [];
@@ -84,42 +86,81 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
   Future<void> _captureGeotaggedPhoto() async {
     setState(() => _isCapturing = true);
     try {
-      // Request camera permission
+      // Request camera and location permissions BEFORE leaving the app for the camera
       final camGranted = await _locationService.requestCameraPermission();
+      final locGranted = await _locationService.requestLocationPermission();
+      
       if (!camGranted) {
         _showError('Camera permission is required');
         setState(() => _isCapturing = false);
         return;
       }
+      if (!locGranted) {
+        _showError('Location permission is heavily recommended to accurately map the tree.');
+        // We do not return here, we still try to get EXIF GPS. If both fail, we'll error out later.
+      }
 
-      // Open camera
+      // Open camera — do NOT set imageQuality, it strips EXIF metadata
       final picker = ImagePicker();
       final pickedFile =
-          await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+          await picker.pickImage(source: ImageSource.camera);
       if (pickedFile == null) {
         setState(() => _isCapturing = false);
         return;
       }
 
-      // Get GPS location
-      final position = await _locationService.getCurrentPosition();
-      if (position == null) {
-        _showError('Could not get GPS location. Please enable location services.');
-        setState(() => _isCapturing = false);
+      final photoFile = File(pickedFile.path);
+      double? lat;
+      double? lng;
+      String gpsSource = '';
+
+      // Strategy: EXIF first, device GPS fallback
+      // 1) Try extracting GPS from the photo's EXIF metadata
+      final exifGps = await ExifService.extractGpsFromFile(photoFile);
+      if (exifGps != null) {
+        lat = exifGps.lat;
+        lng = exifGps.lng;
+        gpsSource = 'exif';
+        debugPrint('GPS from photo EXIF: $lat, $lng');
+      }
+
+      // 2) If no EXIF GPS, fall back to device GPS
+      if (lat == null || lng == null) {
+        final position = await _locationService.getCurrentPosition();
+        if (position != null) {
+          lat = position.latitude;
+          lng = position.longitude;
+          gpsSource = 'device';
+          debugPrint('GPS from device: $lat, $lng');
+        }
+      }
+
+      // 3) If we still have no GPS, warn the user but keep the photo
+      if (lat == null || lng == null) {
+        if (mounted) {
+          _showError(
+              'Could not get GPS from photo or device. Please enable location services and try again.');
+          setState(() {
+            _capturedPhoto = photoFile;
+            _isCapturing = false;
+            _gpsSource = '';
+          });
+        }
         return;
       }
 
-      // Reverse geocode
-      final address = await _locationService.getAddressFromCoordinates(
-          position.latitude, position.longitude);
+      // Reverse geocode the coordinates to a human-readable address
+      final address =
+          await _locationService.getAddressFromCoordinates(lat, lng);
 
       if (mounted) {
         setState(() {
-          _capturedPhoto = File(pickedFile.path);
-          _latitude = position.latitude;
-          _longitude = position.longitude;
+          _capturedPhoto = photoFile;
+          _latitude = lat;
+          _longitude = lng;
+          _gpsSource = gpsSource;
           _coordsController.text =
-              'Lat: ${position.latitude.toStringAsFixed(4)}, Lng: ${position.longitude.toStringAsFixed(4)}';
+              'Lat: ${lat!.toStringAsFixed(4)}, Lng: ${lng!.toStringAsFixed(4)}';
           _locationController.text = address;
           _isCapturing = false;
         });
@@ -227,6 +268,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
           _capturedPhoto = null;
           _latitude = null;
           _longitude = null;
+          _gpsSource = '';
           _selectedRequest = null;
           _selectedDate = DateTime.now();
           _isSubmitting = false;
@@ -362,29 +404,63 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
                 ),
               ),
 
-            // GPS Coordinates chip (shown when captured)
+            // GPS Coordinates chip + source indicator
             if (_latitude != null)
               Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: _gpsSource == 'exif'
+                      ? Colors.blue.shade50
+                      : Colors.green.shade50,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.green.shade200),
+                  border: Border.all(
+                    color: _gpsSource == 'exif'
+                        ? Colors.blue.shade200
+                        : Colors.green.shade200,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.gps_fixed,
-                        size: 16, color: Colors.green.shade700),
+                    Icon(
+                      _gpsSource == 'exif'
+                          ? Icons.camera_alt
+                          : Icons.gps_fixed,
+                      size: 16,
+                      color: _gpsSource == 'exif'
+                          ? Colors.blue.shade700
+                          : Colors.green.shade700,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        'GPS locked: ${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.w600),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _gpsSource == 'exif'
+                                ? 'GPS from photo EXIF'
+                                : 'GPS from device',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _gpsSource == 'exif'
+                                  ? Colors.blue.shade700
+                                  : Colors.green.shade700,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_latitude!.toStringAsFixed(5)}, ${_longitude!.toStringAsFixed(5)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _gpsSource == 'exif'
+                                  ? Colors.blue.shade700
+                                  : Colors.green.shade700,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

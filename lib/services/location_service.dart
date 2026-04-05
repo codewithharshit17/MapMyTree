@@ -25,13 +25,19 @@ class LocationService {
       }
 
       // Get current position
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
-      );
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 15),
+        );
+      } catch (e) {
+        debugPrint('LocationService: getCurrentPosition timed out or failed, trying last known: $e');
+        position = await Geolocator.getLastKnownPosition();
+      }
       return position;
     } catch (e) {
-      debugPrint('LocationService getCurrentPosition error: $e');
+      debugPrint('LocationService getCurrentPosition outer error: $e');
       return null;
     }
   }
@@ -70,6 +76,12 @@ class LocationService {
   /// Request camera permission.
   Future<bool> requestCameraPermission() async {
     final status = await Permission.camera.request();
+    return status.isGranted;
+  }
+
+  /// Request location permission preemptively.
+  Future<bool> requestLocationPermission() async {
+    final status = await Permission.location.request();
     return status.isGranted;
   }
 }

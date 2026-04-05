@@ -1,4 +1,4 @@
-// TODO: REMOVE ENTIRE FILE BEFORE PRODUCTION
+//TODO: REMOVE ENTIRE FILE BEFORE PRODUCTION
 class DevSession {
   static final DevSession _instance = DevSession._internal();
   factory DevSession() => _instance;

@@ -13,7 +13,6 @@ class RequestTreeScreen extends StatefulWidget {
 class _RequestTreeScreenState extends State<RequestTreeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _treeTypeCtrl = TextEditingController();
-  final _locationCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
   final _requestService = RequestService();
   bool _isSubmitting = false;
@@ -21,7 +20,6 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
   @override
   void dispose() {
     _treeTypeCtrl.dispose();
-    _locationCtrl.dispose();
     _descriptionCtrl.dispose();
     super.dispose();
   }
@@ -33,14 +31,13 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
       await _requestService.createRequest(
         userId: SessionHelper.userId,
         treeType: _treeTypeCtrl.text.trim(),
-        preferredLocation: _locationCtrl.text.trim().isNotEmpty ? _locationCtrl.text.trim() : null,
         description: _descriptionCtrl.text.trim().isNotEmpty ? _descriptionCtrl.text.trim() : null,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('🌱 Request submitted!'), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
         _formKey.currentState!.reset();
-        _treeTypeCtrl.clear(); _locationCtrl.clear(); _descriptionCtrl.clear();
+        _treeTypeCtrl.clear(); _descriptionCtrl.clear();
         setState(() => _isSubmitting = false);
       }
     } catch (e) {
@@ -64,9 +61,6 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
           _label('Tree Type *'),
           TextFormField(controller: _treeTypeCtrl, decoration: _dec('e.g. Neem, Banyan, Mango'),
             validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null),
-          const SizedBox(height: 16),
-          _label('Preferred Area / Location'),
-          TextFormField(controller: _locationCtrl, decoration: _dec('Where you want it planted')),
           const SizedBox(height: 16),
           _label('Reason / Description'),
           TextFormField(controller: _descriptionCtrl, maxLines: 3, decoration: _dec('Why you want this tree')),

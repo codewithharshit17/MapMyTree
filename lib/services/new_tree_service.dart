@@ -69,22 +69,49 @@ class NewTreeService {
     }
   }
 
-  /// Stream trees for NGO (realtime).
+  /// Stream trees for NGO (realtime + local fallback).
   Stream<List<NewTreeModel>> streamNgoTrees(String ngoId) {
-    return _db
-        .from('trees')
-        .stream(primaryKey: ['id'])
-        .eq('ngo_id', ngoId)
-        .map((rows) => rows.map((r) => NewTreeModel.fromJson(r)).toList());
+    try {
+      return _db
+          .from('trees')
+          .stream(primaryKey: ['id'])
+          .eq('ngo_id', ngoId)
+          .asyncMap((rows) async {
+            final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
+            final local = await LocalTreeStorage.getTreesForNgo(ngoId);
+            final remoteIds = remote.map((t) => t.id).toSet();
+            final localOnly = local.where((t) => !remoteIds.contains(t.id)).toList();
+            return [...remote, ...localOnly];
+          });
+    } catch (e) {
+      debugPrint('streamNgoTrees error: $e');
+      return Stream.fromFuture(LocalTreeStorage.getTreesForNgo(ngoId));
+    }
   }
 
-  /// Stream trees for a user (realtime).
+  /// Stream trees for a user (realtime + local fallback).
   Stream<List<NewTreeModel>> streamUserTrees(String userId) {
-    return _db
-        .from('trees')
-        .stream(primaryKey: ['id'])
-        .eq('planted_for_user_id', userId)
-        .map((rows) => rows.map((r) => NewTreeModel.fromJson(r)).toList());
+    try {
+      return _db
+          .from('trees')
+          .stream(primaryKey: ['id'])
+          .eq('planted_for_user_id', userId)
+          .asyncMap((rows) async {
+            final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
+            // Local fallback read
+            final allLocal = await LocalTreeStorage.getAllTreesRaw();
+            final local = allLocal
+                .where((r) => r['planted_for_user_id'] == userId)
+                .map((r) => NewTreeModel.fromJson(r))
+                .toList();
+            final remoteIds = remote.map((t) => t.id).toSet();
+            final localOnly = local.where((t) => !remoteIds.contains(t.id)).toList();
+            return [...remote, ...localOnly];
+          });
+    } catch (e) {
+      debugPrint('streamUserTrees error: $e');
+      return const Stream.empty();
+    }
   }
 
   /// Get recent trees for NGO (merged from Supabase + local).
