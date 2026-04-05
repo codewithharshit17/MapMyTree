@@ -6,6 +6,7 @@ import 'ngo_dashboard_tab.dart';
 import 'add_tree_screen.dart';
 import 'ngo_map_screen.dart';
 import 'ngo_requests_tab.dart';
+import 'qr_scanner_screen.dart';
 
 class NgoShellScreen extends StatefulWidget {
   const NgoShellScreen({super.key});
@@ -43,6 +44,10 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
         icon: Icons.inbox_outlined,
         activeIcon: Icons.inbox,
         label: 'Requests'),
+    _TabConfig(
+        icon: Icons.qr_code_scanner_outlined,
+        activeIcon: Icons.qr_code_scanner,
+        label: 'Scan QR'),
   ];
 
   @override
@@ -70,11 +75,15 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
           ],
         ),
         actions: [
+          // Quick scan QR button in app bar
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: const Icon(Icons.qr_code_scanner),
+            tooltip: 'Scan QR Code',
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Notifications coming soon')));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+              );
             },
           ),
           IconButton(
@@ -92,11 +101,48 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
       ),
       body: IndexedStack(
         index: _currentTab,
-        children: const [
-          NgoDashboardTab(),
-          AddTreeScreen(),
-          NgoMapScreen(),
-          NgoRequestsTab(),
+        children: [
+          const NgoDashboardTab(),
+          const AddTreeScreen(),
+          const NgoMapScreen(),
+          const NgoRequestsTab(),
+          // QR Scanner: full live camera, launched as a separate route
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.qr_code_scanner, size: 80, color: Color(0xFF2D6A4F)),
+                const SizedBox(height: 20),
+                const Text(
+                  'Scan a Tree QR Code',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1B4332)),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Point your camera at any MapMyTree QR\nto instantly view the tree information.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+                const SizedBox(height: 28),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Open Scanner'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B4332),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(

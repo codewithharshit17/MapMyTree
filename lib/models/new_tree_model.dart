@@ -1,5 +1,9 @@
 class NewTreeModel {
   final String id;
+  final String? treeId; // Format: MMT-<timestamp>-<random>
+  final String? qrCodeUrl; // URL for QR code
+  final String? plantedBy; // Name or ID of the planter
+  final String? scientificName; // Scientific name of the tree
   final String? ngoId;
   final String? requestId;
   final String? plantedForUserId;
@@ -21,6 +25,10 @@ class NewTreeModel {
 
   const NewTreeModel({
     required this.id,
+    this.treeId,
+    this.qrCodeUrl,
+    this.plantedBy,
+    this.scientificName,
     this.ngoId,
     this.requestId,
     this.plantedForUserId,
@@ -42,6 +50,10 @@ class NewTreeModel {
   factory NewTreeModel.fromJson(Map<String, dynamic> json) {
     return NewTreeModel(
       id: json['id']?.toString() ?? '',
+      treeId: json['tree_id']?.toString(),
+      qrCodeUrl: json['qr_code_url'],
+      plantedBy: json['planted_by'],
+      scientificName: json['scientific_name'],
       ngoId: json['ngo_id'],
       requestId: json['request_id'],
       plantedForUserId: json['planted_for_user_id'],
@@ -71,6 +83,10 @@ class NewTreeModel {
   }
 
   Map<String, dynamic> toInsertJson() => {
+        'tree_id': treeId,
+        'qr_code_url': qrCodeUrl,
+        'planted_by': plantedBy,
+        'scientific_name': scientificName,
         'ngo_id': ngoId,
         'request_id': requestId,
         'planted_for_user_id': plantedForUserId,

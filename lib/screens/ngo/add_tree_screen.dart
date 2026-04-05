@@ -2,12 +2,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:exif/exif.dart';
+import 'package:uuid/uuid.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/session_helper.dart';
 import '../../models/request_model.dart';
 import '../../services/new_tree_service.dart';
 import '../../services/request_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/location_service.dart';
+import 'tree_info_screen.dart';
 
 class AddTreeScreen extends StatefulWidget {
   final RequestModel? prefilledRequest;
@@ -81,52 +86,93 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
     super.dispose();
   }
 
-  Future<void> _captureGeotaggedPhoto() async {
+  double? _convertExifToDouble(dynamic values, String ref) {
+    if (values == null) return null;
+    try {
+      final list = values.values.toList();
+      if (list.length < 3) return null;
+      double degrees = list[0].numerator / list[0].denominator;
+      double minutes = list[1].numerator / list[1].denominator;
+      double seconds = list[2].numerator / list[2].denominator;
+      double result = degrees + (minutes / 60.0) + (seconds / 3600.0);
+      if (ref == 'S' || ref == 'W') {
+        result = -result;
+      }
+      return result;
+    } catch(e) {
+      return null;
+    }
+  }
+
+  Future<void> _pickGeotaggedPhoto(ImageSource source) async {
     setState(() => _isCapturing = true);
     try {
-      // Request camera permission
-      final camGranted = await _locationService.requestCameraPermission();
-      if (!camGranted) {
-        _showError('Camera permission is required');
-        setState(() => _isCapturing = false);
-        return;
+      if (source == ImageSource.camera) {
+        final camGranted = await _locationService.requestCameraPermission();
+        if (!camGranted) {
+          _showError('Camera permission is required');
+          setState(() => _isCapturing = false);
+          return;
+        }
       }
 
-      // Open camera
       final picker = ImagePicker();
-      final pickedFile =
-          await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+      final pickedFile = await picker.pickImage(source: source, imageQuality: 85);
       if (pickedFile == null) {
         setState(() => _isCapturing = false);
         return;
       }
 
-      // Get GPS location
-      final position = await _locationService.getCurrentPosition();
-      if (position == null) {
-        _showError('Could not get GPS location. Please enable location services.');
-        setState(() => _isCapturing = false);
-        return;
+      double? lat;
+      double? lng;
+
+      // EXIF extraction attempt
+      try {
+        final bytes = await File(pickedFile.path).readAsBytes();
+        final tags = await readExifFromBytes(bytes);
+        if (tags.containsKey('GPS GPSLatitude') && tags.containsKey('GPS GPSLongitude') && tags.containsKey('GPS GPSLatitudeRef') && tags.containsKey('GPS GPSLongitudeRef')) {
+          lat = _convertExifToDouble(tags['GPS GPSLatitude'], tags['GPS GPSLatitudeRef']!.printable);
+          lng = _convertExifToDouble(tags['GPS GPSLongitude'], tags['GPS GPSLongitudeRef']!.printable);
+        }
+      } catch (e) {
+        debugPrint('EXIF parse failed: $e');
       }
 
-      // Reverse geocode
-      final address = await _locationService.getAddressFromCoordinates(
-          position.latitude, position.longitude);
+      // Fallback to GPS if no EXIF found and from Camera
+      if (lat == null || lng == null) {
+         final position = await _locationService.getCurrentPosition();
+         if (position != null) {
+           lat = position.latitude;
+           lng = position.longitude;
+         }
+      }
+
+      if (lat == null || lng == null) {
+        _showError('Could not extract location from image or GPS. You can proceed without exact coordinates.');
+      }
+
+      String address = '';
+      if (lat != null && lng != null) {
+        address = await _locationService.getAddressFromCoordinates(lat, lng);
+      }
 
       if (mounted) {
         setState(() {
           _capturedPhoto = File(pickedFile.path);
-          _latitude = position.latitude;
-          _longitude = position.longitude;
-          _coordsController.text =
-              'Lat: ${position.latitude.toStringAsFixed(4)}, Lng: ${position.longitude.toStringAsFixed(4)}';
-          _locationController.text = address;
+          _latitude = lat;
+          _longitude = lng;
+          if (lat != null && lng != null) {
+            _coordsController.text = 'Lat: ${lat.toStringAsFixed(4)}, Lng: ${lng.toStringAsFixed(4)}';
+            _locationController.text = address;
+          } else {
+             _coordsController.text = 'No reliable location data found';
+          }
           _isCapturing = false;
         });
       }
     } catch (e) {
       if (mounted) {
-        _showError('Error capturing photo: $e');
+        _showError('Error picking photo: $e');
         setState(() => _isCapturing = false);
       }
     }
@@ -187,21 +233,32 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
             _capturedPhoto!, 'new-tree');
       }
 
+      // Generate Unique Tree Info
+      final uuid = const Uuid().v4();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final generatedTreeId = 'MMT-$timestamp-${uuid.substring(0, 4)}';
+      final qrCodeUrl = 'https://mapmytree.app/tree/$generatedTreeId';
+
       // Insert tree
-      await _treeService.insertTree({
+      final newTreeData = {
+        'tree_id': generatedTreeId,
+        'qr_code_url': qrCodeUrl,
+        'scientific_name': _speciesController.text.trim(),
+        'planted_by': SessionHelper.userName,
         'ngo_id': SessionHelper.userId,
         'request_id': _selectedRequest?.id,
         'planted_for_user_id': _selectedRequest?.userId,
         'tree_name': _treeNameController.text.trim(),
         'tree_species': _speciesController.text.trim(),
         'planted_date': _selectedDate.toIso8601String().split('T')[0],
-        'latitude': _latitude,
-        'longitude': _longitude,
+        'latitude': _latitude ?? 0.0,
+        'longitude': _longitude ?? 0.0,
         'exact_location': _locationController.text,
         'photo_urls': photoUrl != null ? [photoUrl] : [],
         'notes': _notesController.text.trim(),
         'health_status': 'healthy',
-      });
+      };
+      await _treeService.insertTree(newTreeData);
 
       // Update linked request status
       if (_selectedRequest != null) {
@@ -210,13 +267,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('🌳 Tree planted successfully!'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ));
-
-        // Reset form
+        // Reset form immediately
         _formKey.currentState!.reset();
         _treeNameController.clear();
         _speciesController.clear();
@@ -231,6 +282,109 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
           _selectedDate = DateTime.now();
           _isSubmitting = false;
         });
+
+        // Show Success Info Card with QR and direct Share capability
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.check_circle, color: Colors.green, size: 48),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Tree Successfully Planted!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1B4332))),
+                    const SizedBox(height: 8),
+                    const Text('Here is the official Information Card and QR Code for your new tree.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey, fontSize: 13)),
+                    const SizedBox(height: 24),
+
+                    // Unique DB Info
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF9F9F9),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text('UNIQUE TREE ID', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
+                          const SizedBox(height: 4),
+                          Text(generatedTreeId, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1B4332))),
+                          const SizedBox(height: 12),
+                          const Divider(),
+                          const SizedBox(height: 12),
+                          QrImageView(
+                            data: qrCodeUrl,
+                            version: QrVersions.auto,
+                            size: 150.0,
+                            backgroundColor: Colors.transparent,
+                          ),
+                          const SizedBox(height: 12),
+                          const Text('Scan this QR in the app to view tree details',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Actions
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.share, size: 18),
+                        label: const Text('Share Info Card URL'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1B4332),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          Share.share('Check out this newly planted tree!\nTree ID: $generatedTreeId\nView here: $qrCodeUrl');
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey.shade700,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('Done'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -391,27 +545,43 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
                 ),
               ),
 
-            // Capture button
+            // Capture button (Camera)
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _isCapturing ? null : _captureGeotaggedPhoto,
-                icon: _isCapturing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.camera_alt),
-                label: Text(_capturedPhoto != null
-                    ? '📷 Retake Photo'
-                    : '📷 Click Geotagged Photo'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF1B4332),
-                  side: const BorderSide(color: Color(0xFF1B4332)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
+              child: Row(
+                children: [
+                   Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isCapturing ? null : () => _pickGeotaggedPhoto(ImageSource.camera),
+                      icon: _isCapturing
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.camera_alt),
+                      label: const Text('Camera'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF1B4332),
+                        side: const BorderSide(color: Color(0xFF1B4332)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isCapturing ? null : () => _pickGeotaggedPhoto(ImageSource.gallery),
+                      icon: _isCapturing
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.photo_library),
+                      label: const Text('Gallery (EXIF)'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF1B4332),
+                        side: const BorderSide(color: Color(0xFF1B4332)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

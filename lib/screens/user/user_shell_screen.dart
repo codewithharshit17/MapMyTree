@@ -1,3 +1,4 @@
+import '../ngo/qr_scanner_screen.dart';
 import 'package:flutter/material.dart';
 import '../../core/dev_session.dart';
 import '../../core/session_helper.dart';
@@ -29,8 +30,20 @@ class _UserShellScreenState extends State<UserShellScreen> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         ]),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_outlined), onPressed: () =>
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notifications coming soon')))),
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            tooltip: 'Scan Tree QR',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined), 
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notifications coming soon')))
+          ),
           IconButton(icon: const Icon(Icons.logout_rounded), onPressed: () {
             DevSession().clear();
             Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const AuthScreen()), (route) => false);

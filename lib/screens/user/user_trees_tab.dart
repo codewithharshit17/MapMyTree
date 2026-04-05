@@ -5,6 +5,7 @@ import '../../core/session_helper.dart';
 import '../../models/new_tree_model.dart';
 import '../../services/new_tree_service.dart';
 import '../../services/request_service.dart';
+import '../../widgets/tree_detail_bottom_sheet.dart';
 
 class UserTreesTab extends StatefulWidget {
   const UserTreesTab({super.key});
@@ -108,32 +109,42 @@ class _TreeCard extends StatelessWidget {
       case 'dead': healthColor = Colors.red; break;
       default: healthColor = Colors.green;
     }
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]),
-      child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: tree.firstPhotoUrl.isNotEmpty
-              ? CachedNetworkImage(imageUrl: tree.firstPhotoUrl, width: 64, height: 64, fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => _placeholder())
-              : _placeholder(),
-        ),
-        const SizedBox(width: 14),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(tree.treeName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-          const SizedBox(height: 2),
-          Text(tree.treeSpecies ?? 'Unknown species', style: const TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic)),
-          const SizedBox(height: 4),
-          Text('Planted ${DateFormat('dd MMM yyyy').format(tree.plantingDate)}', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) => TreeDetailBottomSheet(tree: tree, isNgo: false),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]),
+        child: Padding(padding: const EdgeInsets.all(14), child: Row(children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: tree.firstPhotoUrl.isNotEmpty
+                ? CachedNetworkImage(imageUrl: tree.firstPhotoUrl, width: 64, height: 64, fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => _placeholder())
+                : _placeholder(),
+          ),
+          const SizedBox(width: 14),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(tree.treeName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            const SizedBox(height: 2),
+            Text(tree.treeSpecies ?? 'Unknown species', style: const TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic)),
+            const SizedBox(height: 4),
+            Text('Planted ${DateFormat('dd MMM yyyy').format(tree.plantingDate)}', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+          ])),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(color: healthColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+            child: Text(tree.healthLabel, style: TextStyle(color: healthColor, fontSize: 10, fontWeight: FontWeight.w700)),
+          ),
         ])),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(color: healthColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
-          child: Text(tree.healthLabel, style: TextStyle(color: healthColor, fontSize: 10, fontWeight: FontWeight.w700)),
-        ),
-      ])),
+      ),
     );
   }
 
