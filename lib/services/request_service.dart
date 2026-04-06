@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/request_model.dart';
+import '../core/dev_session.dart';
 import 'local_tree_storage.dart';
 
 class RequestService {
@@ -98,24 +99,73 @@ class RequestService {
     }
   }
 
-  /// Stream requests for a specific user (realtime).
+  /// Stream requests for a specific user (realtime + local fallback).
   Stream<List<RequestModel>> streamUserRequests(String userId) {
-    return _db
-        .from(_table)
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .map((rows) => rows.map((r) => RequestModel.fromJson(r)).toList());
+    if (DevSession().isActive) {
+      // In dev mode, use local streaming
+      return LocalTreeStorage.getAllRequestsRawStream().map((raw) {
+        return raw
+            .where((r) => r['user_id'] == userId)
+            .map((r) => RequestModel.fromJson(r))
+            .toList();
+      });
+    }
+    try {
+      return _db
+          .from(_table)
+          .stream(primaryKey: ['id'])
+          .eq('user_id', userId)
+          .asyncMap((rows) async {
+            debugPrint('RequestService: Stream update for user $userId. Rows: ${rows.length}');
+            List<RequestModel> remote = [];
+            try {
+              remote = rows.map((r) => RequestModel.fromJson(r)).toList();
+            } catch (e) {
+              debugPrint('RequestService: Error mapping remote requests: $e');
+            }
+            
+            final allLocal = await LocalTreeStorage.getAllRequestsRaw();
+            final local = allLocal
+                .where((r) => r['user_id'] == userId)
+                .map((r) => RequestModel.fromJson(r))
+                .toList();
+            final remoteIds = remote.map((r) => r.id).toSet();
+            final localOnly = local.where((r) => !remoteIds.contains(r.id)).toList();
+            debugPrint('RequestService: Merged Result: ${remote.length} remote, ${localOnly.length} local-only');
+            return [...remote, ...localOnly];
+          });
+    } catch (e) {
+      debugPrint('streamUserRequests error: $e');
+      return LocalTreeStorage.getAllRequestsRawStream().map((raw) {
+        return raw
+            .where((r) => r['user_id'] == userId)
+            .map((r) => RequestModel.fromJson(r))
+            .toList();
+      });
+    }
   }
 
-  /// Stream all pending requests (for NGO — realtime).
+  /// Stream all pending requests (for NGO — realtime + local fallback).
   Stream<List<RequestModel>> streamPendingRequests() {
-    return _db
-        .from(_table)
-        .stream(primaryKey: ['id'])
-        .map((rows) => rows
-            .where((r) => r['status'] == 'pending')
-            .map((r) => RequestModel.fromJson(r))
-            .toList());
+    try {
+      return _db
+          .from(_table)
+          .stream(primaryKey: ['id'])
+          .asyncMap((rows) async {
+            final remote = rows
+                .where((r) => r['status'] == 'pending')
+                .map((r) => RequestModel.fromJson(r))
+                .toList();
+            await LocalTreeStorage.seedDemoRequests();
+            final local = await LocalTreeStorage.getPendingRequests();
+            final remoteIds = remote.map((r) => r.id).toSet();
+            final localOnly = local.where((r) => !remoteIds.contains(r.id)).toList();
+            return [...remote, ...localOnly];
+          });
+    } catch (e) {
+      debugPrint('streamPendingRequests error: $e');
+      return Stream.fromFuture(LocalTreeStorage.getPendingRequests());
+    }
   }
 
   /// Update request status.

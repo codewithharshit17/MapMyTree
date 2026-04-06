@@ -61,7 +61,7 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
                   urlTemplate: _isSatellite
                       ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
                       : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.mapmytree.app',
+                  userAgentPackageName: 'com.mapmytree.app.flutter_map.v1',
                 ),
                 MarkerClusterLayerWidget(
                   options: MarkerClusterLayerOptions(

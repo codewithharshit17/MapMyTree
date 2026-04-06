@@ -6,6 +6,7 @@ import 'ngo_dashboard_tab.dart';
 import 'add_tree_screen.dart';
 import 'ngo_map_screen.dart';
 import 'ngo_requests_tab.dart';
+import 'qr_scanner_screen.dart';
 
 class NgoShellScreen extends StatefulWidget {
   const NgoShellScreen({super.key});
@@ -43,60 +44,67 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
         icon: Icons.inbox_outlined,
         activeIcon: Icons.inbox,
         label: 'Requests'),
+    _TabConfig(
+        icon: Icons.qr_code_scanner_outlined,
+        activeIcon: Icons.qr_code_scanner,
+        label: 'Scan QR'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F5),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1B4332),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('MapMyTree NGO',
-                style: TextStyle(fontSize: 12, color: Colors.white70)),
-            Text(
-              SessionHelper.userName.isNotEmpty
-                  ? SessionHelper.userName
-                  : 'Dashboard',
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
+      appBar: _currentTab == 4
+          ? null
+          : AppBar(
+              backgroundColor: const Color(0xFF1B4332),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('MapMyTree NGO',
+                      style: TextStyle(fontSize: 12, color: Colors.white70)),
+                  Text(
+                    SessionHelper.userName.isNotEmpty
+                        ? SessionHelper.userName
+                        : 'Dashboard',
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Notifications coming soon')));
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout_rounded),
+                  onPressed: () {
+                    DevSession().clear();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AuthScreen()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Notifications coming soon')));
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () {
-              DevSession().clear();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const AuthScreen()),
-                (route) => false,
-              );
-            },
-          ),
-        ],
-      ),
       body: IndexedStack(
         index: _currentTab,
-        children: const [
-          NgoDashboardTab(),
-          AddTreeScreen(),
-          NgoMapScreen(),
-          NgoRequestsTab(),
+        children: [
+          const NgoDashboardTab(),
+          const AddTreeScreen(),
+          const NgoMapScreen(),
+          const NgoRequestsTab(),
+          const QrScannerScreen(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(

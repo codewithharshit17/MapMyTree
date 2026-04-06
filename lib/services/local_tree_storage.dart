@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,8 @@ import '../models/request_model.dart';
 class LocalTreeStorage {
   static const _treesKey = 'local_trees';
   static const _requestsKey = 'local_requests';
+  static final StreamController<List<Map<String, dynamic>>> _treeController = StreamController.broadcast();
+  static final StreamController<List<Map<String, dynamic>>> _requestController = StreamController.broadcast();
 
   // ─── TREES ───────────────────────────────────────────────────────────────
 
@@ -24,6 +27,8 @@ class LocalTreeStorage {
       existing.add(data);
       await prefs.setString(_treesKey, jsonEncode(existing));
       debugPrint('LocalTreeStorage: saved tree $id');
+      // Emit update
+      _treeController.add(existing);
       return id;
     } catch (e) {
       debugPrint('LocalTreeStorage saveTree error: $e');
@@ -43,6 +48,17 @@ class LocalTreeStorage {
       debugPrint('LocalTreeStorage getAllTreesRaw error: $e');
       return [];
     }
+  }
+
+  /// Get stream of all raw tree maps from local storage.
+  static Stream<List<Map<String, dynamic>>> getAllTreesRawStream() {
+    return Stream.multi((controller) async {
+      final initial = await getAllTreesRaw();
+      controller.add(initial);
+      await for (final update in _treeController.stream) {
+        controller.add(update);
+      }
+    });
   }
 
   /// Get all trees as [NewTreeModel] objects.
@@ -119,6 +135,8 @@ class LocalTreeStorage {
       data['created_at'] ??= DateTime.now().toIso8601String();
       existing.add(data);
       await prefs.setString(_requestsKey, jsonEncode(existing));
+      // Emit update
+      _requestController.add(existing);
     } catch (e) {
       debugPrint('LocalTreeStorage saveRequest error: $e');
     }
@@ -135,6 +153,17 @@ class LocalTreeStorage {
     } catch (e) {
       return [];
     }
+  }
+
+  /// Get stream of all raw request maps from local storage.
+  static Stream<List<Map<String, dynamic>>> getAllRequestsRawStream() {
+    return Stream.multi((controller) async {
+      final initial = await getAllRequestsRaw();
+      controller.add(initial);
+      await for (final update in _requestController.stream) {
+        controller.add(update);
+      }
+    });
   }
 
   /// Get all pending requests as [RequestModel].
@@ -155,6 +184,8 @@ class LocalTreeStorage {
         if (req['id'] == id) req['status'] = status;
       }
       await prefs.setString(_requestsKey, jsonEncode(all));
+      // Emit update
+      _requestController.add(all);
     } catch (e) {
       debugPrint('LocalTreeStorage updateRequestStatus error: $e');
     }

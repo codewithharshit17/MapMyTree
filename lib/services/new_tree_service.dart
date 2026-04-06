@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/new_tree_model.dart';
 import '../models/tree_update_model.dart';
+import '../core/dev_session.dart';
 import 'local_tree_storage.dart';
 
 class NewTreeService {
@@ -91,13 +92,29 @@ class NewTreeService {
 
   /// Stream trees for a user (realtime + local fallback).
   Stream<List<NewTreeModel>> streamUserTrees(String userId) {
+    if (DevSession().isActive) {
+      // In dev mode, use local streaming
+      return LocalTreeStorage.getAllTreesRawStream().map((raw) {
+        return raw
+            .where((r) => r['planted_for_user_id'] == userId)
+            .map((r) => NewTreeModel.fromJson(r))
+            .toList();
+      });
+    }
     try {
       return _db
           .from('trees')
           .stream(primaryKey: ['id'])
           .eq('planted_for_user_id', userId)
           .asyncMap((rows) async {
-            final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
+            debugPrint('NewTreeService: Stream update for user $userId. Rows: ${rows.length}');
+            List<NewTreeModel> remote = [];
+            try {
+              remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
+            } catch (e) {
+              debugPrint('NewTreeService: Error mapping remote trees: $e');
+            }
+            
             // Local fallback read
             final allLocal = await LocalTreeStorage.getAllTreesRaw();
             final local = allLocal
@@ -106,11 +123,17 @@ class NewTreeService {
                 .toList();
             final remoteIds = remote.map((t) => t.id).toSet();
             final localOnly = local.where((t) => !remoteIds.contains(t.id)).toList();
+            debugPrint('NewTreeService: Merged Result: ${remote.length} remote, ${localOnly.length} local-only');
             return [...remote, ...localOnly];
           });
     } catch (e) {
       debugPrint('streamUserTrees error: $e');
-      return const Stream.empty();
+      return LocalTreeStorage.getAllTreesRawStream().map((raw) {
+        return raw
+            .where((r) => r['planted_for_user_id'] == userId)
+            .map((r) => NewTreeModel.fromJson(r))
+            .toList();
+      });
     }
   }
 
@@ -207,9 +230,78 @@ class NewTreeService {
           .eq('id', treeId)
           .maybeSingle();
       if (data != null) return NewTreeModel.fromJson(data);
-      return null;
+      return await _fallbackLocalById(treeId);
     } catch (e) {
       debugPrint('NewTreeService getTree error: $e');
+      return await _fallbackLocalById(treeId);
+    }
+  }
+
+  Future<NewTreeModel?> _fallbackLocalById(String treeId) async {
+    try {
+      final localTrees = await LocalTreeStorage.getAllTreesRaw();
+      final localMatch = localTrees.where((t) => t['id'] == treeId).firstOrNull;
+      if (localMatch != null) return NewTreeModel.fromJson(localMatch);
+    } catch (e) {
+      debugPrint('Local search error: $e');
+    }
+    return null;
+  }
+
+  /// Get a single tree by its unique `tree_id` (e.g. MMT-XXX).
+  Future<NewTreeModel?> getTreeByUniqueId(String uniqueTreeId) async {
+    try {
+      final data = await _db
+          .from('trees')
+          .select()
+          .eq('tree_id', uniqueTreeId)
+          .maybeSingle();
+      if (data != null) return NewTreeModel.fromJson(data);
+      
+      // If we reach here, Supabase succeeded but returned null
+      return await _fallbackLocalByUniqueId(uniqueTreeId);
+    } catch (e) {
+      debugPrint('NewTreeService getTreeByUniqueId error: $e');
+      // If Supabase throws (e.g. table doesn't exist), fallback to local
+      return await _fallbackLocalByUniqueId(uniqueTreeId);
+    }
+  }
+
+  Future<NewTreeModel?> _fallbackLocalByUniqueId(String uniqueTreeId) async {
+    try {
+      final localTrees = await LocalTreeStorage.getAllTreesRaw();
+      final localMatch = localTrees.where((t) => t['tree_id'] == uniqueTreeId).firstOrNull;
+      if (localMatch != null) return NewTreeModel.fromJson(localMatch);
+      // Fallback: try matching by pure ID in case it's an old tree
+      final oldMatch = localTrees.where((t) => t['id'] == uniqueTreeId).firstOrNull;
+      if (oldMatch != null) return NewTreeModel.fromJson(oldMatch);
+    } catch (e) {
+      debugPrint('Local search error: $e');
+    }
+    return null;
+  }
+
+  /// Get a single tree by its associated `request_id`.
+  Future<NewTreeModel?> getTreeByRequestId(String requestId) async {
+    try {
+      final data = await _db
+          .from('trees')
+          .select()
+          .eq('request_id', requestId)
+          .maybeSingle();
+      if (data != null) return NewTreeModel.fromJson(data);
+      
+      // Fallback local search
+      final localTrees = await LocalTreeStorage.getAllTreesRaw();
+      final localMatch = localTrees.where((t) => t['request_id'] == requestId).firstOrNull;
+      if (localMatch != null) return NewTreeModel.fromJson(localMatch);
+
+      return null;
+    } catch (e) {
+      debugPrint('NewTreeService getTreeByRequestId error: $e');
+      final localTrees = await LocalTreeStorage.getAllTreesRaw();
+      final localMatch = localTrees.where((t) => t['request_id'] == requestId).firstOrNull;
+      if (localMatch != null) return NewTreeModel.fromJson(localMatch);
       return null;
     }
   }

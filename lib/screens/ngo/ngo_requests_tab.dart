@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/request_model.dart';
 import '../../services/request_service.dart';
+import '../../services/new_tree_service.dart';
+import '../../widgets/tree_detail_bottom_sheet.dart';
 import 'add_tree_screen.dart';
 
 class NgoRequestsTab extends StatefulWidget {
@@ -158,6 +160,40 @@ class _ReqCard extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1B4332), foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0,
+                ),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  // Show loading indicator
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (ctx) => const Center(child: CircularProgressIndicator(color: Color(0xFF1B4332))),
+                  );
+                  final tree = await NewTreeService().getTreeByRequestId(request.id);
+                  if (context.mounted) Navigator.pop(context); // pop loading
+                  if (tree != null && context.mounted) {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (ctx) => TreeDetailBottomSheet(tree: tree, isNgo: true),
+                    );
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not load tree details.')));
+                  }
+                },
+                icon: const Icon(Icons.qr_code, size: 16),
+                label: const Text('View Info Card'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF1B4332),
+                  side: const BorderSide(color: Color(0xFF1B4332)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
             ),

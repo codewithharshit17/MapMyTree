@@ -8,6 +8,7 @@ import 'providers/auth_provider.dart';
 import 'screens/auth_screen.dart';
 import 'screens/ngo/ngo_shell_screen.dart';
 import 'screens/user/user_shell_screen.dart';
+import 'screens/ngo/tree_info_screen.dart';
 
 // TODO: Replace these with your actual Supabase project values from:
 // Supabase Dashboard → Project Settings → API
@@ -53,6 +54,15 @@ class MapMyTreeApp extends StatelessWidget {
         '/auth': (context) => const AuthScreen(),
         '/ngo-dashboard': (context) => const NgoShellScreen(),
         '/user-dashboard': (context) => const UserShellScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name != null && settings.name!.startsWith('/tree/')) {
+          final treeId = settings.name!.replaceFirst('/tree/', '');
+          return MaterialPageRoute(
+            builder: (context) => TreeInfoScreen(treeId: treeId),
+          );
+        }
+        return null;
       },
     );
   }

@@ -20,12 +20,46 @@ class _UserMapScreenState extends State<UserMapScreen> {
   final _mapController = MapController();
   bool _isSatellite = false;
 
+  late Stream<List<NewTreeModel>> _treeStream;
+
+  @override
+  void initState() {
+    super.initState();
+    final userId = SessionHelper.userId;
+    if (userId.isEmpty) {
+      _treeStream = Stream.value([]);
+    } else {
+      _treeStream = _treeService.streamUserTrees(userId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(children: [
       StreamBuilder<List<NewTreeModel>>(
-        stream: _treeService.streamUserTrees(SessionHelper.userId),
+        stream: _treeStream,
         builder: (context, snap) {
+          if (snap.hasError) {
+            return Center(child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                const SizedBox(height: 16),
+                Text('Map Error: ${snap.error}', textAlign: TextAlign.center),
+                TextButton(onPressed: () => setState(() {}), child: const Text('Retry'))
+              ]),
+            ));
+          }
+          if (SessionHelper.userId.isEmpty) {
+            return const Center(child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Column(children: [
+                Icon(Icons.login, color: Colors.grey, size: 48),
+                SizedBox(height: 16),
+                Text('Please log in to view the map', textAlign: TextAlign.center),
+              ]),
+            ));
+          }
           final trees = snap.data ?? [];
           final markers = trees.map((t) => Marker(
             point: LatLng(t.latitude, t.longitude), width: 32, height: 32,
@@ -47,11 +81,12 @@ class _UserMapScreenState extends State<UserMapScreen> {
             mapController: _mapController,
             options: const MapOptions(initialCenter: LatLng(20.5937, 78.9629), initialZoom: 5),
             children: [
-              TileLayer(
-                urlTemplate: _isSatellite
-                    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.mapmytree.app'),
+                TileLayer(
+                  urlTemplate: _isSatellite
+                      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.mapmytree.app.client_v1',
+                ),
               MarkerClusterLayerWidget(
                   options: MarkerClusterLayerOptions(
                     maxClusterRadius: 45,
@@ -100,9 +135,9 @@ class _UserMapScreenState extends State<UserMapScreen> {
           child: Icon(_isSatellite ? Icons.map : Icons.satellite, color: const Color(0xFF1B4332))),
       ])),
       Positioned(top: 16, left: 16, child: StreamBuilder<List<NewTreeModel>>(
-        stream: _treeService.streamUserTrees(SessionHelper.userId),
+        stream: _treeStream,
         builder: (_, snap) {
-          final count = snap.data?.length ?? 0;
+          final count = snap.hasError ? 0 : (snap.data?.length ?? 0);
           return Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20),
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)]),

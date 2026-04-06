@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 class RequestModel {
   final String id;
   final String userId;
@@ -22,18 +23,28 @@ class RequestModel {
   });
 
   factory RequestModel.fromJson(Map<String, dynamic> json) {
-    return RequestModel(
-      id: json['id']?.toString() ?? '',
-      userId: json['user_id'] ?? '',
-      treeType: json['tree_type'] ?? '',
-      preferredLocation: json['preferred_location'],
-      description: json['description'],
-      status: json['status'] ?? 'pending',
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
-      userName: json['profiles']?['full_name'] ?? json['user_name'],
-    );
+    try {
+      return RequestModel(
+        id: json['id']?.toString() ?? '',
+        userId: json['user_id']?.toString() ?? '',
+        treeType: json['tree_type']?.toString() ?? 'Tree',
+        preferredLocation: json['preferred_location']?.toString(),
+        description: json['description']?.toString(),
+        status: json['status']?.toString() ?? 'pending',
+        createdAt: json['created_at'] != null
+            ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+            : DateTime.now(),
+        userName: json['profiles']?['full_name']?.toString() ?? json['user_name']?.toString() ?? 'User',
+      );
+    } catch (e) {
+      debugPrint('Error parsing RequestModel: $e | JSON: $json');
+      return RequestModel(
+        id: json['id']?.toString() ?? 'err',
+        userId: '',
+        treeType: 'Parse Error',
+        createdAt: DateTime.now(),
+      );
+    }
   }
 
   Map<String, dynamic> toInsertJson() => {
