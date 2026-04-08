@@ -19,7 +19,9 @@ class AuthService {
         password: password,
         data: {'name': name, 'role': 'user'},
       );
-      // The backend Postgres Trigger will now automatically create the public.users row.
+      if (res.user != null) {
+        await handlePostLogin(res.user!);
+      }
       return res.user;
     } catch (e) {
       debugPrint('User sign up error: $e');
@@ -48,7 +50,9 @@ class AuthService {
           'address': address,
         },
       );
-      // The backend Postgres Trigger will now automatically create the public.users and public.ngos rows.
+      if (res.user != null) {
+        await handlePostLogin(res.user!);
+      }
       return res.user;
     } catch (e) {
       debugPrint('NGO sign up error: $e');
@@ -63,6 +67,9 @@ class AuthService {
         email: email,
         password: password,
       );
+      if (res.user != null) {
+        await handlePostLogin(res.user!);
+      }
       return res.user;
     } catch (e) {
       debugPrint('Sign in error: $e');
@@ -88,10 +95,13 @@ class AuthService {
         throw 'No ID Token found.';
       }
 
-      await _supabase.auth.signInWithIdToken(
+      final res = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
       );
+      if (res.user != null) {
+        await handlePostLogin(res.user!);
+      }
     } catch (e) {
       debugPrint('Native Google sign in error: $e');
       rethrow;
@@ -109,6 +119,32 @@ class AuthService {
       return data?['role'] ?? 'user';
     } catch (e) {
       return 'user';
+    }
+  }
+
+  // --- POST LOGIN ROLE ASSIGNMENT (UPSERT PROFILE) ---
+  Future<void> handlePostLogin(User user) async {
+    final email = user.email;
+    if (email == null) return;
+
+    final ngoEmails = [
+      'ngo1@gmail.com',
+      'ngo2@gmail.com',
+      'ngo3@gmail.com',
+      'ngo4@gmail.com',
+    ];
+
+    final role = ngoEmails.contains(email) ? 'ngo' : 'user';
+
+    try {
+      await _supabase.from('profiles').upsert({
+        'id': user.id,
+        'email': email,
+        'role': role,
+        'full_name': user.userMetadata?['name'] ?? user.userMetadata?['full_name'],
+      });
+    } catch (e) {
+      debugPrint('handlePostLogin upsert error: $e');
     }
   }
 

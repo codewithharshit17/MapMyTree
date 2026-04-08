@@ -7,6 +7,8 @@ import 'add_tree_screen.dart';
 import 'ngo_map_screen.dart';
 import 'ngo_requests_tab.dart';
 import 'qr_scanner_screen.dart';
+import '../../services/new_tree_service.dart';
+import '../user_profile_screen.dart';
 
 class NgoShellScreen extends StatefulWidget {
   const NgoShellScreen({super.key});
@@ -21,10 +23,6 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
   @override
   void initState() {
     super.initState();
-    // Activate dev session if auth is bypassed
-    if (!DevSession().isActive) {
-      DevSession().loginAsNGO();
-    }
   }
 
   static const List<_TabConfig> _tabs = [
@@ -78,11 +76,40 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_outlined),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Notifications coming soon')));
+                  icon: const Icon(Icons.download_rounded),
+                  tooltip: 'Export Trees to CSV',
+                  onPressed: () async {
+                    try {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Generating CSV...')),
+                      );
+                      await NewTreeService().exportTreesToCsv(SessionHelper.userId);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Export failed: $e')),
+                        );
+                      }
+                    }
                   },
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(
+                         builder: (_) => UserProfileScreen(userId: SessionHelper.userId),
+                      ));
+                    },
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.white24,
+                      child: Text(
+                        SessionHelper.userName.isNotEmpty ? SessionHelper.userName[0].toUpperCase() : '?',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.logout_rounded),

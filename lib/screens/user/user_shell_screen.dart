@@ -6,6 +6,7 @@ import 'user_trees_tab.dart';
 import 'user_map_screen.dart';
 import 'request_tree_screen.dart';
 import '../ngo/qr_scanner_screen.dart';
+import '../user_profile_screen.dart';
 
 class UserShellScreen extends StatefulWidget {
   const UserShellScreen({super.key});
@@ -35,6 +36,24 @@ class _UserShellScreenState extends State<UserShellScreen> {
                 IconButton(
                     icon: const Icon(Icons.notifications_outlined),
                     onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notifications coming soon')))),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(
+                         builder: (_) => UserProfileScreen(userId: SessionHelper.userId),
+                      ));
+                    },
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.white24,
+                      child: Text(
+                        SessionHelper.userName.isNotEmpty ? SessionHelper.userName[0].toUpperCase() : '?',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
                 IconButton(
                     icon: const Icon(Icons.logout_rounded),
                     onPressed: () {

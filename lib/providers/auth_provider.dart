@@ -40,6 +40,12 @@ class AppAuthProvider extends ChangeNotifier {
       return;
     }
 
+    try {
+      await _authService.handlePostLogin(supabaseUser);
+    } catch (e) {
+      debugPrint('Error in _onAuthStateChanged handlePostLogin: $e');
+    }
+
     final role = await _authService.getUserRole(supabaseUser.id);
     _profile = await _authService.getProfileModel(supabaseUser.id);
 

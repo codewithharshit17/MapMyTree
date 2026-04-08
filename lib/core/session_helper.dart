@@ -15,9 +15,23 @@ class SessionHelper {
 
   static String get userName {
     if (DevSession().isActive) return DevSession().userName;
-    return Supabase.instance.client.auth.currentUser?.userMetadata?['name'] ??
-        Supabase.instance.client.auth.currentUser?.email ??
-        '';
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return '';
+    
+    final metaName = user.userMetadata?['name'] ?? user.userMetadata?['full_name'];
+    if (metaName != null && metaName.toString().isNotEmpty) {
+      return metaName.toString();
+    }
+    
+    final email = user.email;
+    if (email != null && email.isNotEmpty) {
+      final prefix = email.split('@')[0];
+      if (prefix.isNotEmpty) {
+        return prefix[0].toUpperCase() + prefix.substring(1);
+      }
+    }
+    
+    return 'User';
   }
 
   static String get userEmail {

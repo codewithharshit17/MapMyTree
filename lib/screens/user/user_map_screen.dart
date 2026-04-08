@@ -29,7 +29,7 @@ class _UserMapScreenState extends State<UserMapScreen> {
     if (userId.isEmpty) {
       _treeStream = Stream.value([]);
     } else {
-      _treeStream = _treeService.streamUserTrees(userId);
+      _treeStream = _treeService.streamAllPublicTrees().asBroadcastStream();
     }
   }
 

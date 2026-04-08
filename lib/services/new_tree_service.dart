@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/new_tree_model.dart';
 import '../models/tree_update_model.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../core/dev_session.dart';
 import 'local_tree_storage.dart';
 
@@ -10,18 +13,10 @@ class NewTreeService {
 
   /// Insert a new tree. Tries Supabase first, falls back to local storage.
   Future<String?> insertTree(Map<String, dynamic> data) async {
-    try {
-      final result =
-          await _db.from('trees').insert(data).select('id').single();
-      debugPrint('NewTreeService: saved to Supabase ✓');
-      return result['id'] as String?;
-    } catch (e) {
-      debugPrint('NewTreeService insertTree (Supabase) failed: $e');
-      debugPrint('NewTreeService: falling back to local storage...');
-      // Fallback: save locally
-      final localId = await LocalTreeStorage.saveTree(Map.from(data));
-      return localId;
-    }
+    final result =
+        await _db.from('trees').insert(data).select('id').single();
+    debugPrint('NewTreeService: saved to Supabase ✓');
+    return result['id'] as String?;
   }
 
   /// Update a tree.
@@ -51,7 +46,59 @@ class NewTreeService {
       return [...remote, ...localOnly];
     } catch (e) {
       debugPrint('NewTreeService getTreesForNgo (Supabase) error: $e');
+      debugPrint('NewTreeService getTreesForNgo (Supabase) error: $e');
       return local;
+    }
+  }
+
+  /// Export trees for an NGO to a CSV file and share it.
+  Future<void> exportTreesToCsv(String ngoId) async {
+    try {
+      final trees = await getTreesForNgo(ngoId);
+
+      // Create CSV header
+      final StringBuffer csvBuffer = StringBuffer();
+      csvBuffer.writeln('Tree ID,Unique ID,Name,Species,Planted Date,Health Status,Latitude,Longitude,Exact Location,Notes,Planted By');
+
+      // Add tree rows
+      for (final tree in trees) {
+        final lat = tree.latitude.toString();
+        final lng = tree.longitude.toString();
+        final date = tree.plantingDate.toIso8601String().split('T')[0];
+        
+        // Escape quotes and commas in fields
+        String escapeField(String? field) {
+          if (field == null) return '';
+          final text = field.replaceAll('"', '""');
+          if (text.contains(',') || text.contains('"') || text.contains('\n')) {
+            return '"$text"';
+          }
+          return text;
+        }
+
+        csvBuffer.writeln(
+          '${escapeField(tree.id)},${escapeField(tree.treeId)},${escapeField(tree.treeName)},'
+          '${escapeField(tree.treeSpecies)},${escapeField(date)},${escapeField(tree.healthStatus)},'
+          '${escapeField(lat)},${escapeField(lng)},${escapeField(tree.exactLocation)},'
+          '${escapeField(tree.notes)},${escapeField(tree.plantedBy)}'
+        );
+      }
+
+      // Write to temp directory
+      final directory = await getTemporaryDirectory();
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final File file = File('${directory.path}/mapmytree_export_$timestamp.csv');
+      await file.writeAsString(csvBuffer.toString());
+
+      // Share the file
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path)],
+        subject: 'MapMyTree Export Data',
+        text: 'Attached is the exported tree data.',
+      ));
+    } catch (e) {
+      debugPrint('Error exporting trees: $e');
+      rethrow;
     }
   }
 
@@ -134,6 +181,30 @@ class NewTreeService {
             .map((r) => NewTreeModel.fromJson(r))
             .toList();
       });
+    }
+  }
+
+  /// Stream ALL public trees for the maps (matches remote + local cached trees)
+  Stream<List<NewTreeModel>> streamAllPublicTrees() {
+    try {
+      return _db
+          .from('trees')
+          .stream(primaryKey: ['id'])
+          .asyncMap((rows) async {
+            final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
+            
+            // Bring back local trees so they aren't lost
+            final allLocalRaw = await LocalTreeStorage.getAllTreesRaw();
+            final local = allLocalRaw.map((r) => NewTreeModel.fromJson(r)).toList();
+            
+            final remoteIds = remote.map((t) => t.id).toSet();
+            final localOnly = local.where((t) => !remoteIds.contains(t.id)).toList();
+            
+            return [...remote, ...localOnly];
+          });
+    } catch (e) {
+      debugPrint('streamAllPublicTrees error: $e');
+      return Stream.value([]);
     }
   }
 

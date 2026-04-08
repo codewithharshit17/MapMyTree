@@ -7,8 +7,8 @@ import 'local_tree_storage.dart';
 class RequestService {
   final SupabaseClient _db = Supabase.instance.client;
 
-  // NOTE: The Supabase table is 'update_requests', not 'requests'.
-  static const _table = 'update_requests';
+  // NOTE: The Supabase table is 'requests', matching the new schema.
+  static const _table = 'requests';
 
   /// Create a new tree request from a user.
   Future<void> createRequest({
@@ -41,8 +41,6 @@ class RequestService {
 
   /// Get all pending requests (for NGO). Merges Supabase + local.
   Future<List<RequestModel>> getPendingRequests() async {
-    // Seed demo requests on first call so NGO has something to work with
-    await LocalTreeStorage.seedDemoRequests();
     final local = await LocalTreeStorage.getPendingRequests();
     try {
       final rows = await _db
@@ -152,11 +150,28 @@ class RequestService {
           .from(_table)
           .stream(primaryKey: ['id'])
           .asyncMap((rows) async {
+            // Fetch User profiles to attach names safely
+            Map<String, String> profileNames = {};
+            try {
+              final List<dynamic> allProfiles = await _db.from('profiles').select('id, full_name, email');
+              for (var p in allProfiles) {
+                profileNames[p['id'].toString()] = p['full_name']?.toString() ?? p['email']?.toString() ?? 'User';
+              }
+            } catch (e) {
+              debugPrint('Failed to load profiles for stream: $e');
+            }
+
             final remote = rows
                 .where((r) => r['status'] == 'pending')
-                .map((r) => RequestModel.fromJson(r))
+                .map((r) {
+                   final String uid = r['user_id']?.toString() ?? '';
+                   if (profileNames.containsKey(uid)) {
+                     r['user_name'] = profileNames[uid];
+                   }
+                   return RequestModel.fromJson(r);
+                })
                 .toList();
-            await LocalTreeStorage.seedDemoRequests();
+
             final local = await LocalTreeStorage.getPendingRequests();
             final remoteIds = remote.map((r) => r.id).toSet();
             final localOnly = local.where((r) => !remoteIds.contains(r.id)).toList();

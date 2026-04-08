@@ -22,6 +22,13 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
 
   final LatLng _center = const LatLng(20.5937, 78.9629); // Default: India center
   bool _isSatellite = false;
+  late final Stream<List<NewTreeModel>> _treesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _treesStream = _treeService.streamAllPublicTrees().asBroadcastStream();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +36,7 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
       children: [
         // Map with realtime tree markers
         StreamBuilder<List<NewTreeModel>>(
-          stream: _treeService.streamNgoTrees(SessionHelper.userId),
+          stream: _treesStream,
           builder: (context, snapshot) {
             final trees = snapshot.data ?? [];
             final markers = trees.map((tree) => Marker(
@@ -151,7 +158,7 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
           top: 16,
           left: 16,
           child: StreamBuilder<List<NewTreeModel>>(
-            stream: _treeService.streamNgoTrees(SessionHelper.userId),
+            stream: _treesStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Container(

@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/new_tree_model.dart';
 import '../screens/ngo/edit_tree_screen.dart';
 import '../screens/ngo/tree_info_screen.dart';
+import '../screens/user_profile_screen.dart';
 
 class TreeDetailBottomSheet extends StatelessWidget {
   final NewTreeModel tree;
@@ -61,7 +62,17 @@ class TreeDetailBottomSheet extends StatelessWidget {
               if (tree.treeSpecies != null) Text(tree.treeSpecies!, style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.grey)),
               const SizedBox(height: 16),
               _row('📅', 'Planted', DateFormat('dd MMMM yyyy').format(tree.plantingDate)),
-              if (tree.plantedForUserName != null) _row('👤', 'Planted For', tree.plantedForUserName!),
+              if (tree.plantedForUserName != null) 
+                GestureDetector(
+                  onTap: () {
+                    if (tree.plantedForUserId != null && tree.plantedForUserId!.isNotEmpty) {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => UserProfileScreen(userId: tree.plantedForUserId!),
+                      ));
+                    }
+                  },
+                  child: _row('👤', 'Planted For', tree.plantedForUserName!, isLink: tree.plantedForUserId != null && tree.plantedForUserId!.isNotEmpty),
+                ),
               if (tree.exactLocation != null) _row('📍', 'Location', tree.exactLocation!),
               _row('🗺️', 'Coordinates', 'Lat: ${tree.latitude.toStringAsFixed(4)}, Lng: ${tree.longitude.toStringAsFixed(4)}'),
               
@@ -202,14 +213,19 @@ class TreeDetailBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _row(String emoji, String label, String value) {
+  Widget _row(String emoji, String label, String value, {bool isLink = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(emoji, style: const TextStyle(fontSize: 16)),
         const SizedBox(width: 10),
         SizedBox(width: 90, child: Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w500))),
-        Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+        Expanded(child: Text(value, style: TextStyle(
+          fontSize: 13, 
+          fontWeight: FontWeight.w600,
+          color: isLink ? const Color(0xFF1B4332) : Colors.black87,
+          decoration: isLink ? TextDecoration.underline : null,
+        ))),
       ]),
     );
   }
