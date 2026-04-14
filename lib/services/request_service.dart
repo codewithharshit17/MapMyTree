@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/request_model.dart';
@@ -10,13 +11,34 @@ class RequestService {
   // NOTE: The Supabase table is 'requests', matching the new schema.
   static const _table = 'requests';
 
+  /// Upload payment screenshot to Supabase Storage.
+  /// Returns the public URL, or null on failure.
+  Future<String?> uploadPaymentScreenshot(File file, String userId) async {
+    try {
+      final ext = file.path.split('.').last;
+      final fileName = 'payment_${userId}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final bytes = await file.readAsBytes();
+      await _db.storage
+          .from('payment-screenshots')
+          .uploadBinary(fileName, bytes, fileOptions: FileOptions(contentType: 'image/$ext', upsert: true));
+      final url = _db.storage.from('payment-screenshots').getPublicUrl(fileName);
+      return url;
+    } catch (e) {
+      debugPrint('RequestService uploadPaymentScreenshot error: $e');
+      return null;
+    }
+  }
+
   /// Create a new tree request from a user.
   Future<void> createRequest({
     required String userId,
     required String treeType,
     String? preferredLocation,
     String? description,
+    int? plantCost,
+    String? paymentScreenshotUrl,
   }) async {
+    final paymentStatus = paymentScreenshotUrl != null ? 'pending_verification' : 'unpaid';
     try {
       await _db.from(_table).insert({
         'user_id': userId,
@@ -24,6 +46,9 @@ class RequestService {
         'preferred_location': preferredLocation,
         'description': description,
         'status': 'pending',
+        'plant_cost': plantCost,
+        'payment_screenshot_url': paymentScreenshotUrl,
+        'payment_status': paymentStatus,
       });
     } catch (e) {
       debugPrint('RequestService createRequest error: $e');
@@ -34,10 +59,14 @@ class RequestService {
         'preferred_location': preferredLocation,
         'description': description,
         'status': 'pending',
+        'plant_cost': plantCost,
+        'payment_screenshot_url': paymentScreenshotUrl,
+        'payment_status': paymentStatus,
         'user_name': 'Unknown User',
       });
     }
   }
+
 
   /// Get all pending requests (for NGO). Merges Supabase + local.
   Future<List<RequestModel>> getPendingRequests() async {
@@ -196,6 +225,19 @@ class RequestService {
           'RequestService updateRequestStatus (Supabase) error: $e (local updated)');
     }
   }
+
+  /// Update payment status (for NGO verification).
+  Future<void> updatePaymentStatus(String requestId, String paymentStatus) async {
+    try {
+      await _db
+          .from(_table)
+          .update({'payment_status': paymentStatus}).eq('id', requestId);
+    } catch (e) {
+      debugPrint('RequestService updatePaymentStatus error: $e');
+    }
+  }
+
+
 
   /// Get count of pending requests.
   Future<int> getPendingRequestCount() async {

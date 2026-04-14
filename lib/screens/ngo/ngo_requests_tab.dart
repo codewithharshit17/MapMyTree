@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/request_model.dart';
@@ -138,7 +139,9 @@ class _ReqCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(children: [
             const Text('🌱 ', style: TextStyle(fontSize: 16)),
-            Text(request.treeType, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            Expanded(child: Text(request.treeType, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
+            if (request.plantCost != null)
+              Text('₹${request.plantCost}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF1B4332))),
           ]),
           if (request.preferredLocation != null && request.preferredLocation!.isNotEmpty) ...[
             const SizedBox(height: 6),
@@ -152,6 +155,118 @@ class _ReqCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text('"${request.description}"', style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontStyle: FontStyle.italic)),
           ],
+
+          // ── Payment Status Badge ──────────────────────────────────────
+          const SizedBox(height: 10),
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: request.isPaymentVerified
+                    ? Colors.green.withValues(alpha: 0.12)
+                    : request.isPaymentPendingVerification
+                        ? Colors.blue.withValues(alpha: 0.12)
+                        : Colors.red.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: request.isPaymentVerified
+                      ? Colors.green
+                      : request.isPaymentPendingVerification
+                          ? Colors.blue
+                          : Colors.red,
+                  width: 0.5,
+                ),
+              ),
+              child: Text(
+                request.paymentStatusLabel,
+                style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w600,
+                  color: request.isPaymentVerified
+                      ? Colors.green.shade700
+                      : request.isPaymentPendingVerification
+                          ? Colors.blue.shade700
+                          : Colors.red.shade700,
+                ),
+              ),
+            ),
+          ]),
+
+          // ── Payment Screenshot ────────────────────────────────────────
+          if (request.paymentScreenshotUrl != null) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () => showDialog(
+                context: context,
+                builder: (_) => Dialog(
+                  backgroundColor: Colors.black,
+                  insetPadding: const EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: request.paymentScreenshotUrl!,
+                        fit: BoxFit.contain,
+                        placeholder: (_, __) => const Padding(
+                          padding: EdgeInsets.all(40),
+                          child: CircularProgressIndicator(color: Colors.white),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Close', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: CachedNetworkImage(
+                  imageUrl: request.paymentScreenshotUrl!,
+                  height: 100,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    height: 100,
+                    color: Colors.grey.shade200,
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text('Tap screenshot to view full size', style: TextStyle(color: Colors.grey, fontSize: 11)),
+
+            // Verify Payment button (only if pending_verification)
+            if (request.isPaymentPendingVerification && isPending) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await RequestService().updatePaymentStatus(request.id, 'verified');
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('✅ Payment verified!'),
+                          backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.verified_rounded, size: 16),
+                  label: const Text('Verify Payment'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.green.shade700,
+                    side: BorderSide(color: Colors.green.shade400),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
+          ],
+
           if (isPending) ...[
             const SizedBox(height: 14),
             SizedBox(
