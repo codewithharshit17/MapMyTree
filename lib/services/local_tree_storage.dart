@@ -124,6 +124,19 @@ class LocalTreeStorage {
     await prefs.remove(_treesKey);
   }
 
+  /// Remove a specific tree from local storage after successful sync.
+  static Future<void> removeTree(String localId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final all = await getAllTreesRaw();
+      final remaining = all.where((t) => t['id'] != localId).toList();
+      await prefs.setString(_treesKey, jsonEncode(remaining));
+      _treeController.add(remaining);
+    } catch (e) {
+      debugPrint('LocalTreeStorage removeTree error: $e');
+    }
+  }
+
   // ─── REQUESTS ─────────────────────────────────────────────────────────────
 
   /// Save a mock pending request to local storage.

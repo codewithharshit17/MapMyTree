@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -7,6 +8,10 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/new_tree_model.dart';
 import '../../services/new_tree_service.dart';
+import '../../core/session_helper.dart';
+import '../../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
+import 'edit_tree_screen.dart';
 
 class TreeInfoScreen extends StatefulWidget {
   final String treeId;
@@ -74,6 +79,14 @@ class _TreeInfoScreenState extends State<TreeInfoScreen> {
         iconTheme: const IconThemeData(color: Colors.black),
         titleTextStyle: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold, fontFamily: 'Nunito'),
         actions: [
+          if ((SessionHelper.isNgo || context.read<AppAuthProvider>().isNgo) && _tree != null)
+            IconButton(
+              icon: const Icon(Icons.edit, color: Color(0xFF1B4332)),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => EditTreeScreen(tree: _tree!)));
+              },
+              tooltip: 'Edit Tree',
+            ),
           IconButton(
             icon: const Icon(Icons.share, color: Color(0xFF1B4332)),
             onPressed: () => _shareTree(t),
@@ -85,18 +98,25 @@ class _TreeInfoScreenState extends State<TreeInfoScreen> {
         child: Column(
           children: [
             // Photo Header
-            if (t.firstPhotoUrl.isNotEmpty && t.firstPhotoUrl.startsWith('http')) 
-               CachedNetworkImage(
-                 imageUrl: t.firstPhotoUrl,
-                 width: double.infinity,
-                 height: 250,
-                 fit: BoxFit.cover,
-                 errorWidget: (context, url, err) => Container(
-                   height: 250,
-                   color: Colors.grey.shade300,
-                   child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-                 ),
-               )
+            if (t.firstPhotoUrl.isNotEmpty) 
+               t.firstPhotoUrl.startsWith('local://')
+                   ? Image.file(
+                       File(t.firstPhotoUrl.replaceFirst('local://', '')),
+                       width: double.infinity,
+                       height: 250,
+                       fit: BoxFit.cover,
+                     )
+                   : CachedNetworkImage(
+                       imageUrl: t.firstPhotoUrl,
+                       width: double.infinity,
+                       height: 250,
+                       fit: BoxFit.cover,
+                       errorWidget: (context, url, err) => Container(
+                         height: 250,
+                         color: Colors.grey.shade300,
+                         child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                       ),
+                     )
              else 
                Container(
                  width: double.infinity,
@@ -119,6 +139,8 @@ class _TreeInfoScreenState extends State<TreeInfoScreen> {
                    const SizedBox(height: 24),
                    
                    _buildInfoRow(Icons.person, 'Planted By', t.plantedBy ?? t.ngoName ?? 'Unknown / NGO'),
+                   if (t.landownerType != null)
+                     _buildInfoRow(Icons.landscape, 'Landowner', '${t.landownerType} (${t.landownerName ?? 'Unknown'})'),
                    _buildInfoRow(Icons.calendar_today, 'Date Planted', DateFormat('dd MMMM yyyy').format(t.plantingDate)),
                    _buildInfoRow(Icons.update, 'Last Updated', DateFormat('dd MMMM yyyy hh:mm a').format(t.updatedAt)),
                    

@@ -50,7 +50,14 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: _currentTab == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _currentTab != 0) {
+          setState(() => _currentTab = 0);
+        }
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFFF5F7F5),
       appBar: _currentTab == 4
           ? null
@@ -88,6 +95,29 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Export failed: $e')),
+                        );
+                      }
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.cloud_sync_rounded),
+                  tooltip: 'Sync Offline Data',
+                  onPressed: () async {
+                    try {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Syncing offline data...')),
+                      );
+                      final count = await NewTreeService().syncOfflineTrees();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(count > 0 ? 'Successfully synced $count items!' : 'Everything is up to date.'), backgroundColor: const Color(0xFF1B4332)),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Sync failed: $e'), backgroundColor: Colors.red),
                         );
                       }
                     }
@@ -131,7 +161,7 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
           const AddTreeScreen(),
           const NgoMapScreen(),
           const NgoRequestsTab(),
-          const QrScannerScreen(),
+          QrScannerScreen(isActive: _currentTab == 4),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -151,6 +181,7 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
                 ))
             .toList(),
       ),
+    ),
     );
   }
 }

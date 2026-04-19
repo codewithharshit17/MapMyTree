@@ -35,6 +35,9 @@ class RequestService {
     required String treeType,
     String? preferredLocation,
     String? description,
+    String? treeName,
+    String? occasion,
+    String? occasionDate,
     int? plantCost,
     String? paymentScreenshotUrl,
   }) async {
@@ -45,6 +48,9 @@ class RequestService {
         'tree_type': treeType,
         'preferred_location': preferredLocation,
         'description': description,
+        'tree_name': treeName,
+        'occasion': occasion,
+        'occasion_date': occasionDate,
         'status': 'pending',
         'plant_cost': plantCost,
         'payment_screenshot_url': paymentScreenshotUrl,
@@ -58,6 +64,9 @@ class RequestService {
         'tree_type': treeType,
         'preferred_location': preferredLocation,
         'description': description,
+        'tree_name': treeName,
+        'occasion': occasion,
+        'occasion_date': occasionDate,
         'status': 'pending',
         'plant_cost': plantCost,
         'payment_screenshot_url': paymentScreenshotUrl,
@@ -74,7 +83,7 @@ class RequestService {
     try {
       final rows = await _db
           .from(_table)
-          .select()
+          .select('*, profiles(full_name)')
           .eq('status', 'pending');
       final remote = rows.map((r) => RequestModel.fromJson(r)).toList();
       // Merge: remote first, then local-only
@@ -98,7 +107,7 @@ class RequestService {
     try {
       final rows = await _db
           .from(_table)
-          .select()
+          .select('*, profiles(full_name)')
           .eq('status', 'completed');
       final remote = rows.map((r) => RequestModel.fromJson(r)).toList();
       final remoteIds = remote.map((r) => r.id).toSet();

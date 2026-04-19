@@ -8,6 +8,8 @@ import '../../services/new_tree_service.dart';
 import '../../services/location_service.dart';
 import '../../widgets/tree_detail_bottom_sheet.dart';
 
+enum NgoMapFilter { all, dombivli, dhakne }
+
 class NgoMapScreen extends StatefulWidget {
   const NgoMapScreen({super.key});
 
@@ -22,6 +24,8 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
 
   final LatLng _center = const LatLng(20.5937, 78.9629); // Default: India center
   bool _isSatellite = false;
+  NgoMapFilter _filter = NgoMapFilter.all;
+
   late final Stream<List<NewTreeModel>> _treesStream;
 
   @override
@@ -38,7 +42,13 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
         StreamBuilder<List<NewTreeModel>>(
           stream: _treesStream,
           builder: (context, snapshot) {
-            final trees = snapshot.data ?? [];
+            var trees = snapshot.data ?? [];
+            if (_filter == NgoMapFilter.dombivli) {
+              trees = trees.where((t) => (t.exactLocation ?? '').toLowerCase().contains('dombivli') || (t.exactLocation ?? '').toLowerCase().contains('dombivali')).toList();
+            } else if (_filter == NgoMapFilter.dhakne) {
+              trees = trees.where((t) => (t.exactLocation ?? '').toLowerCase().contains('dhakne')).toList();
+            }
+
             final markers = trees.map((tree) => Marker(
               point: LatLng(tree.latitude, tree.longitude),
               width: 32,
@@ -153,59 +163,67 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
           ),
         ),
 
-        // Loading indicator
         Positioned(
           top: 16,
           left: 16,
-          child: StreamBuilder<List<NewTreeModel>>(
-            stream: _treesStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 8)
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2)),
-                      SizedBox(width: 8),
-                      Text('Loading trees...',
-                          style: TextStyle(fontSize: 12)),
-                    ],
-                  ),
-                );
-              }
-              final count = snapshot.data?.length ?? 0;
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8)
+          right: 16,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              StreamBuilder<List<NewTreeModel>>(
+                stream: _treesStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)]),
+                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                        SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                        SizedBox(width: 8), Text('Loading trees...', style: TextStyle(fontSize: 12)),
+                      ]),
+                    );
+                  }
+                  var countTrees = snapshot.data ?? [];
+                  if (_filter == NgoMapFilter.dombivli) {
+                    countTrees = countTrees.where((t) => (t.exactLocation ?? '').toLowerCase().contains('dombivli') || (t.exactLocation ?? '').toLowerCase().contains('dombivali')).toList();
+                  } else if (_filter == NgoMapFilter.dhakne) {
+                    countTrees = countTrees.where((t) => (t.exactLocation ?? '').toLowerCase().contains('dhakne')).toList();
+                  }
+                  
+                  final count = countTrees.length;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)]),
+                    child: Text('🌳 $count trees', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<NgoMapFilter>(
+                  segments: const [
+                    ButtonSegment(value: NgoMapFilter.all, label: Text('All Regions', style: TextStyle(fontSize: 12))),
+                    ButtonSegment(value: NgoMapFilter.dombivli, label: Text('Dombivli', style: TextStyle(fontSize: 12))),
+                    ButtonSegment(value: NgoMapFilter.dhakne, label: Text('Dhakne', style: TextStyle(fontSize: 12))),
                   ],
+                  selected: {_filter},
+                  onSelectionChanged: (set) => setState(() => _filter = set.first),
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.selected)) return const Color(0xFF1B4332);
+                      return Colors.white;
+                    }),
+                    foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.selected)) return Colors.white;
+                      return const Color(0xFF1B4332);
+                    }),
+                  ),
                 ),
-                child: Text('🌳 $count trees',
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600)),
-              );
-            },
+              ),
+            ],
           ),
         ),
       ],

@@ -5,6 +5,8 @@ import '../../models/new_tree_model.dart';
 import '../../services/new_tree_service.dart';
 import '../../services/request_service.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 
 class NgoDashboardTab extends StatefulWidget {
   const NgoDashboardTab({super.key});
@@ -23,7 +25,7 @@ class _NgoDashboardTabState extends State<NgoDashboardTab> {
       _treeService.getTreeCount(ngoId),
       _requestService.getPendingRequestCount(),
       _requestService.getCompletedRequestCount(),
-      _treeService.getTreesThisMonth(ngoId),
+      _treeService.getSurvivalRate(ngoId),
       _treeService.getRecentTrees(ngoId, limit: 5),
       _treeService.getMonthlyStats(ngoId),
     ]);
@@ -31,7 +33,7 @@ class _NgoDashboardTabState extends State<NgoDashboardTab> {
       'totalTrees': results[0] as int,
       'pendingRequests': results[1] as int,
       'completedRequests': results[2] as int,
-      'treesThisMonth': results[3] as int,
+      'survivalRate': results[3] as double,
       'recentTrees': results[4] as List<NewTreeModel>,
       'monthlyStats': results[5] as Map<String, int>,
     };
@@ -75,6 +77,39 @@ class _NgoDashboardTabState extends State<NgoDashboardTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Consumer<AppAuthProvider>(
+                  builder: (context, auth, _) {
+                    if (auth.profile != null && !auth.profile!.isVerified && !DevSession().isActive) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 24),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Verification Pending', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                                  const SizedBox(height: 4),
+                                  Text('Your NGO account is currently pending administrative verification. Database inserts are restricted.',
+                                      style: TextStyle(color: Colors.orange.shade800, fontSize: 13)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
                 Text(
                   'Welcome back, ${SessionHelper.userName} 👋',
                   style: const TextStyle(
@@ -119,9 +154,9 @@ class _NgoDashboardTabState extends State<NgoDashboardTab> {
                   const SizedBox(width: 12),
                   Expanded(
                       child: _StatCard(
-                    title: 'This Month',
-                    value: '${stats['treesThisMonth']}',
-                    icon: Icons.calendar_today,
+                    title: 'Survival Rate',
+                    value: '${(stats['survivalRate'] as double).toStringAsFixed(1)}%',
+                    icon: Icons.health_and_safety,
                     color: const Color(0xFF0077B6),
                   )),
                 ]),

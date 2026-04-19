@@ -134,9 +134,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   Future<void> _submitUserSignup() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
       _showError('Please fill in all fields');
       return;
     }
@@ -151,7 +152,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
     try {
       await _authService.signUpUserWithEmail(
-          name: name, email: email, password: password);
+          name: name, email: email, phone: phone, password: password);
       if (mounted) _navigateBasedOnRole('user');
     } on AuthException catch (e) {
       _showError(e.message);
@@ -444,6 +445,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         _buildLabel('Email'),
         _buildTextField(controller: _emailController, hintText: 'you@example.com',
             icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+        const SizedBox(height: 14),
+        _buildLabel('Phone Number'),
+        _buildTextField(controller: _phoneController, hintText: '+91 98765 43210',
+            icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
         const SizedBox(height: 14),
         _buildLabel('Password'),
         _buildTextField(controller: _passwordController, hintText: 'Min 8 characters',

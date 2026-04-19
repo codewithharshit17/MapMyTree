@@ -62,6 +62,8 @@ class TreeDetailBottomSheet extends StatelessWidget {
               if (tree.treeSpecies != null) Text(tree.treeSpecies!, style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.grey)),
               const SizedBox(height: 16),
               _row('📅', 'Planted', DateFormat('dd MMMM yyyy').format(tree.plantingDate)),
+              if (tree.landownerType != null)
+                _row('⛰️', 'Landowner', '${tree.landownerType} (${tree.landownerName ?? 'Unknown'})'),
               if (tree.plantedForUserName != null) 
                 GestureDetector(
                   onTap: () {

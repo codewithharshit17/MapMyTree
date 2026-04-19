@@ -279,7 +279,7 @@ class _ReqCard extends StatelessWidget {
                   ),
                 )),
                 icon: const Icon(Icons.eco, size: 16),
-                label: const Text('🌱 Mark as Planted'),
+                label: const Text('🌱 Request Completed'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1B4332), foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0,

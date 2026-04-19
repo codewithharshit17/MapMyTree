@@ -18,6 +18,8 @@ class NewTreeModel {
   final List<String> photoUrls;
   final String healthStatus; // 'healthy', 'needs_attention', 'dead'
   final String? notes;
+  final String? landownerType;
+  final String? landownerName;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -43,6 +45,8 @@ class NewTreeModel {
     this.photoUrls = const [],
     this.healthStatus = 'healthy',
     this.notes,
+    this.landownerType,
+    this.landownerName,
     required this.createdAt,
     required this.updatedAt,
     this.ngoName,
@@ -71,6 +75,8 @@ class NewTreeModel {
         photoUrls: json['photo_urls'] != null ? List<String>.from(json['photo_urls'] as Iterable) : [],
         healthStatus: json['health_status']?.toString() ?? 'healthy',
         notes: json['notes']?.toString() ?? '',
+        landownerType: json['landownership_type']?.toString(),
+        landownerName: json['landowner_name']?.toString(),
         createdAt: json['created_at'] != null
             ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
             : DateTime.now(),
@@ -111,6 +117,8 @@ class NewTreeModel {
         'photo_urls': photoUrls,
         'health_status': healthStatus,
         'notes': notes,
+        'landownership_type': landownerType,
+        'landowner_name': landownerName,
       };
 
   String get healthEmoji {

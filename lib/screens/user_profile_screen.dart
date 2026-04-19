@@ -5,6 +5,7 @@ import '../../services/new_tree_service.dart';
 import '../../models/new_tree_model.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/tree_detail_bottom_sheet.dart';
+import 'edit_profile_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -71,6 +72,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         foregroundColor: Colors.white,
         title: Text(_profile?.role == 'ngo' ? 'NGO Profile' : 'User Profile', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         elevation: 0,
+        actions: [
+          if (_profile != null && _profile!.id == _authService.currentUser?.id)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => EditProfileScreen(profile: _profile!)),
+                );
+                if (result == true && mounted) {
+                  setState(() => _isLoading = true);
+                  _loadUserProfile();
+                }
+              },
+            )
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF1B4332)))
@@ -116,6 +133,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   _profile!.email ?? 'No email provided',
                   style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.8)),
                 ),
+                if (_profile!.phoneNumber != null && _profile!.phoneNumber!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _profile!.phoneNumber!,
+                    style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.8)),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

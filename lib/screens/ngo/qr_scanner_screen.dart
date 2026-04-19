@@ -3,7 +3,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'tree_info_screen.dart';
 
 class QrScannerScreen extends StatefulWidget {
-  const QrScannerScreen({super.key});
+  final bool isActive;
+  const QrScannerScreen({super.key, this.isActive = true});
 
   @override
   State<QrScannerScreen> createState() => _QrScannerScreenState();
@@ -24,6 +25,20 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       facing: CameraFacing.back,
       torchEnabled: false,
     );
+  }
+
+  @override
+  void didUpdateWidget(QrScannerScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive) {
+      if (widget.isActive) {
+        _controller?.start();
+        _scanned = false;
+      } else {
+        _controller?.stop();
+        _torchOn = false;
+      }
+    }
   }
 
   @override
@@ -64,12 +79,17 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       return;
     }
 
-    Navigator.pushReplacement(
+    Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => TreeInfoScreen(treeId: treeId),
       ),
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() => _scanned = false);
+        _controller?.start();
+      }
+    });
   }
 
   void _showNotFound(String raw) {
@@ -127,10 +147,11 @@ class _QrScannerScreenState extends State<QrScannerScreen>
       body: Stack(
         children: [
           // Camera preview
-          MobileScanner(
-            controller: _controller!,
-            onDetect: _onDetect,
-          ),
+          if (widget.isActive)
+            MobileScanner(
+              controller: _controller!,
+              onDetect: _onDetect,
+            ),
           // Overlay
           _buildScanOverlay(),
           // Bottom hint

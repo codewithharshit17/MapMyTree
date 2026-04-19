@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
 import '../core/dev_session.dart';
 import 'onboarding_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 import 'ngo/ngo_shell_screen.dart';
 import 'user/user_shell_screen.dart';
@@ -60,82 +62,75 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _checkAuthAndNavigate() async {
-    await Future.delayed(const Duration(seconds: 3));
-    if (!mounted) return;
-
+    // We want to show the splash for at least 2 seconds so the animation completes
+    final minDelay = Future.delayed(const Duration(seconds: 2));
+    
+    // Check dev session
     if (DevSession().isActive) {
+      await minDelay;
+      if (!mounted) return;
       if (DevSession().userRole == 'ngo') {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const NgoShellScreen()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NgoShellScreen()));
       } else {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const UserShellScreen()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserShellScreen()));
       }
       return;
     }
 
-    final supabase = Supabase.instance.client;
-    final session = supabase.auth.currentSession;
+    if (!mounted) return;
+    
+    // We wait for AppAuthProvider to not be unknown.
+    final authProvider = context.read<AppAuthProvider>();
+    
+    // Wait for the minimum splash delay
+    await minDelay;
+    
+    if (!mounted) return;
 
-    if (session == null) {
-      // Not logged in
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const OnboardingScreen(),
-            transitionsBuilder: (_, anim, __, child) =>
-                FadeTransition(opacity: anim, child: child),
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
+    // If still unknown, listen and wait
+    if (authProvider.status == AuthStatus.unknown) {
+      // Create a completer to wait until it's loaded
+      final completer = Completer<void>();
+      void listener() {
+        if (authProvider.status != AuthStatus.unknown) {
+          authProvider.removeListener(listener);
+          if (!completer.isCompleted) completer.complete();
+        }
       }
+      authProvider.addListener(listener);
+      await completer.future;
+    }
+
+    if (!mounted) return;
+
+    // Navigate based on status safely
+    if (authProvider.status == AuthStatus.unauthenticated) {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const OnboardingScreen(),
+          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    } else if (authProvider.status == AuthStatus.ngoAuthenticated) {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const NgoShellScreen(),
+          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
     } else {
-      // Check role
-      try {
-        final data = await supabase
-            .from('users')
-            .select('role')
-            .eq('uid', session.user.id)
-            .maybeSingle();
-        final role = data?['role'] ?? 'user';
-
-        if (!mounted) return;
-
-        if (role == 'ngo') {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const NgoShellScreen(),
-              transitionsBuilder: (_, anim, __, child) =>
-                  FadeTransition(opacity: anim, child: child),
-              transitionDuration: const Duration(milliseconds: 500),
-            ),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const UserShellScreen(),
-              transitionsBuilder: (_, anim, __, child) =>
-                  FadeTransition(opacity: anim, child: child),
-              transitionDuration: const Duration(milliseconds: 500),
-            ),
-          );
-        }
-      } catch (_) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const UserShellScreen(),
-              transitionsBuilder: (_, anim, __, child) =>
-                  FadeTransition(opacity: anim, child: child),
-              transitionDuration: const Duration(milliseconds: 500),
-            ),
-          );
-        }
-      }
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const UserShellScreen(),
+          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
     }
   }
 

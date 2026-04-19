@@ -8,6 +8,8 @@ import '../../services/new_tree_service.dart';
 import '../../services/location_service.dart';
 import '../../widgets/tree_detail_bottom_sheet.dart';
 
+enum UserMapFilter { all, myTrees }
+
 class UserMapScreen extends StatefulWidget {
   const UserMapScreen({super.key});
   @override
@@ -19,6 +21,7 @@ class _UserMapScreenState extends State<UserMapScreen> {
   final _locationService = LocationService();
   final _mapController = MapController();
   bool _isSatellite = false;
+  UserMapFilter _filter = UserMapFilter.all;
 
   late Stream<List<NewTreeModel>> _treeStream;
 
@@ -60,7 +63,12 @@ class _UserMapScreenState extends State<UserMapScreen> {
               ]),
             ));
           }
-          final trees = snap.data ?? [];
+          var trees = snap.data ?? [];
+          if (_filter == UserMapFilter.myTrees) {
+            final uid = SessionHelper.userId;
+            trees = trees.where((t) => t.plantedForUserId == uid).toList();
+          }
+          
           final markers = trees.map((t) => Marker(
             point: LatLng(t.latitude, t.longitude), width: 32, height: 32,
             child: GestureDetector(
@@ -134,15 +142,44 @@ class _UserMapScreenState extends State<UserMapScreen> {
           onPressed: () => setState(() => _isSatellite = !_isSatellite),
           child: Icon(_isSatellite ? Icons.map : Icons.satellite, color: const Color(0xFF1B4332))),
       ])),
-      Positioned(top: 16, left: 16, child: StreamBuilder<List<NewTreeModel>>(
-        stream: _treeStream,
-        builder: (_, snap) {
-          final count = snap.hasError ? 0 : (snap.data?.length ?? 0);
-          return Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)]),
-            child: Text('🌳 $count trees', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)));
-        },
+      Positioned(top: 16, left: 16, right: 16, child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StreamBuilder<List<NewTreeModel>>(
+            stream: _treeStream,
+            builder: (_, snap) {
+              var countTrees = snap.data ?? [];
+              if (_filter == UserMapFilter.myTrees) {
+                final uid = SessionHelper.userId;
+                countTrees = countTrees.where((t) => t.plantedForUserId == uid).toList();
+              }
+              final count = snap.hasError ? 0 : countTrees.length;
+              return Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)]),
+                child: Text('🌳 $count trees', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)));
+            },
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<UserMapFilter>(
+            segments: const [
+              ButtonSegment(value: UserMapFilter.all, label: Text('All Plantations', style: TextStyle(fontSize: 12))),
+              ButtonSegment(value: UserMapFilter.myTrees, label: Text('Planted by Me', style: TextStyle(fontSize: 12))),
+            ],
+            selected: {_filter},
+            onSelectionChanged: (set) => setState(() => _filter = set.first),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                if (states.contains(WidgetState.selected)) return const Color(0xFF1B4332);
+                return Colors.white;
+              }),
+              foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                if (states.contains(WidgetState.selected)) return Colors.white;
+                return const Color(0xFF1B4332);
+              }),
+            ),
+          ),
+        ],
       )),
     ]);
   }

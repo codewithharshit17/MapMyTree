@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../core/session_helper.dart';
 import '../../models/request_model.dart';
 import '../../services/new_tree_service.dart';
@@ -9,6 +11,7 @@ import '../../services/request_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/location_service.dart';
 import '../../services/exif_service.dart';
+import '../../services/notification_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -25,6 +28,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
   final _treeNameController = TextEditingController();
   final _speciesController = TextEditingController();
   final _notesController = TextEditingController();
+  final _landownerNameController = TextEditingController();
   final _coordsController = TextEditingController();
   final _locationController = TextEditingController();
 
@@ -40,6 +44,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
   bool _isSubmitting = false;
   bool _isCapturing = false;
   String _gpsSource = ''; // 'exif' or 'device'
+  String? _selectedLandownerType;
 
   // Request dropdown
   List<RequestModel> _pendingRequests = [];
@@ -73,6 +78,8 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
               _pendingRequests.insert(0, widget.prefilledRequest!);
             }
             _selectedRequest = _pendingRequests.firstWhere((r) => r.id == widget.prefilledRequest!.id);
+            _treeNameController.text = _selectedRequest!.treeName ?? '';
+            _speciesController.text = _selectedRequest!.treeType ?? '';
           }
         });
       }
@@ -86,6 +93,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
     _treeNameController.dispose();
     _speciesController.dispose();
     _notesController.dispose();
+    _landownerNameController.dispose();
     _coordsController.dispose();
     _locationController.dispose();
     super.dispose();
@@ -257,6 +265,8 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
         'exact_location': _locationController.text,
         'photo_urls': photoUrl != null ? [photoUrl] : [],
         'notes': _notesController.text.trim(),
+        'landownership_type': _selectedLandownerType,
+        'landowner_name': _landownerNameController.text.trim(),
         'health_status': 'healthy',
       };
       
@@ -267,10 +277,19 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
       
       await _treeService.insertTree(treeData);
 
-      // Update linked request status
+      // Update linked request status and trigger notification
       if (_selectedRequest != null) {
         await _requestService.updateRequestStatus(
             _selectedRequest!.id, 'completed');
+            
+        await NotificationService().createNotification(
+          userId: _selectedRequest!.userId,
+          title: 'Tree Successfully Planted! 🌱',
+          message: 'Your requested tree (${_speciesController.text.trim()}) has been planted and logged.',
+          type: 'planting_completed',
+          imageUrl: photoUrl,
+          relatedTreeId: generatedTreeId,
+        );
       }
 
       if (mounted) {
@@ -279,6 +298,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
         _treeNameController.clear();
         _speciesController.clear();
         _notesController.clear();
+        _landownerNameController.clear();
         _coordsController.clear();
         _locationController.clear();
         setState(() {
@@ -287,6 +307,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
           _longitude = null;
           _gpsSource = '';
           _selectedRequest = null;
+          _selectedLandownerType = null;
           _selectedDate = DateTime.now();
           _isSubmitting = false;
         });
@@ -414,6 +435,30 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AppAuthProvider>();
+    final isVerified = (auth.profile?.isVerified ?? true) || DevSession().isActive;
+
+    if (!isVerified) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.gavel_rounded, size: 64, color: Colors.orange),
+              const SizedBox(height: 24),
+              const Text('Verification Required', 
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1B4332))),
+              const SizedBox(height: 12),
+              const Text('Your NGO account must be verified by an administrator before you can add trees to the global map.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Form(
@@ -452,30 +497,82 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Planted for (dropdown)
+            // Planted for — read-only card when prefilled, dropdown otherwise
             _buildLabel('Planted For (Request)'),
-            _loadingRequests
-                ? const LinearProgressIndicator()
-                : DropdownButtonFormField<RequestModel>(
-                    initialValue: _selectedRequest,
-                    isExpanded: true,
-                    decoration: _inputDecoration('Select a pending request'),
-                    items: [
-                      const DropdownMenuItem<RequestModel>(
-                        value: null,
-                        child: Text('None (general planting)',
-                            style: TextStyle(color: Colors.grey)),
+            if (widget.prefilledRequest != null)
+              // Show locked info card — NGO came from a request
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF1B4332).withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.person_pin, color: Color(0xFF1B4332), size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.prefilledRequest!.userName ?? 'User',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: Color(0xFF1B4332),
+                            ),
+                          ),
+                          if ((widget.prefilledRequest!.treeType ?? '').isNotEmpty)
+                            Text(
+                              widget.prefilledRequest!.treeType!,
+                              style: const TextStyle(fontSize: 13, color: Colors.grey),
+                            ),
+                        ],
                       ),
-                      ..._pendingRequests.map((req) =>
-                          DropdownMenuItem<RequestModel>(
-                            value: req,
-                            child: Text(
-                                '${req.treeType} — ${req.userName ?? 'Unknown'}',
-                                overflow: TextOverflow.ellipsis),
-                          )),
-                    ],
-                    onChanged: (v) => setState(() => _selectedRequest = v),
-                  ),
+                    ),
+                    const Icon(Icons.lock_outline, color: Colors.grey, size: 16),
+                  ],
+                ),
+              )
+            else
+              _loadingRequests
+                  ? const LinearProgressIndicator()
+                  : DropdownButtonFormField<RequestModel>(
+                      initialValue: _selectedRequest,
+                      isExpanded: true,
+                      decoration: _inputDecoration('Select a pending request'),
+                      items: [
+                        const DropdownMenuItem<RequestModel>(
+                          value: null,
+                          child: Text('None (general planting)',
+                              style: TextStyle(color: Colors.grey)),
+                        ),
+                        ..._pendingRequests.map((req) =>
+                            DropdownMenuItem<RequestModel>(
+                              value: req,
+                              child: Text(
+                                  '${req.treeType} — ${req.userName ?? 'Unknown'}',
+                                  overflow: TextOverflow.ellipsis),
+                            )),
+                      ],
+                      onChanged: (v) => setState(() {
+                        _selectedRequest = v;
+                        if (v != null) {
+                          if (v.treeName != null && v.treeName!.isNotEmpty) {
+                            _treeNameController.text = v.treeName!;
+                          }
+                          if (v.treeType != null && v.treeType!.isNotEmpty) {
+                            _speciesController.text = v.treeType!;
+                          }
+                        } else {
+                          _treeNameController.clear();
+                          _speciesController.clear();
+                        }
+                      }),
+                    ),
             const SizedBox(height: 16),
 
             // Planting date
@@ -503,6 +600,31 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
               maxLines: 3,
               decoration: _inputDecoration('Any additional notes...'),
             ),
+            const SizedBox(height: 16),
+
+            // Landowner details
+            _buildLabel('Type of Landowner *'),
+            DropdownButtonFormField<String>(
+              value: _selectedLandownerType,
+              decoration: _inputDecoration('Select land ownership type'),
+              items: const [
+                DropdownMenuItem(value: 'Private land', child: Text('Private land')),
+                DropdownMenuItem(value: 'Government land', child: Text('Government land')),
+                DropdownMenuItem(value: 'NGO/Institute land', child: Text('NGO/Institute land')),
+              ],
+              onChanged: (v) => setState(() => _selectedLandownerType = v),
+              validator: (v) => v == null ? 'Please select a landowner type' : null,
+            ),
+            
+            if (_selectedLandownerType != null) ...[
+              const SizedBox(height: 16),
+              _buildLabel('Landowner / Institute Name *'),
+              TextFormField(
+                controller: _landownerNameController,
+                decoration: _inputDecoration('e.g., Name of private owner or institute'),
+                validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+              ),
+            ],
             const SizedBox(height: 24),
 
             // Geotagged photo section

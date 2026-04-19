@@ -51,16 +51,46 @@ class RequestTreeScreen extends StatefulWidget {
 class _RequestTreeScreenState extends State<RequestTreeScreen> {
   final _formKey = GlobalKey<FormState>();
   _PlantOption? _selectedPlant;
-  final _descriptionCtrl = TextEditingController();
+  final _treeNameCtrl = TextEditingController();
   final _requestService = RequestService();
   bool _isSubmitting = false;
   File? _paymentScreenshot;
   bool _showQr = false;
 
+  String? _selectedOccasion;
+  DateTime? _occasionDate;
+  final List<String> _occasions = ['Birthday', 'Anniversary', 'In Memory', 'Other'];
+  final _customOccasionCtrl = TextEditingController();
+
   @override
   void dispose() {
-    _descriptionCtrl.dispose();
+    _treeNameCtrl.dispose();
+    _customOccasionCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _occasionDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF1B4332),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _occasionDate) {
+      setState(() {
+        _occasionDate = picked;
+      });
+    }
   }
 
   Future<void> _pickScreenshot() async {
@@ -84,12 +114,17 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
         );
       }
 
+      final occasionValue = _selectedOccasion == 'Other' 
+            ? (_customOccasionCtrl.text.trim().isNotEmpty ? _customOccasionCtrl.text.trim() : 'Other')
+            : _selectedOccasion;
+
       await _requestService.createRequest(
         userId: SessionHelper.userId,
         treeType: _selectedPlant!.name,
-        description: _descriptionCtrl.text.trim().isNotEmpty
-            ? _descriptionCtrl.text.trim()
-            : null,
+        treeName: _treeNameCtrl.text.trim().isNotEmpty ? _treeNameCtrl.text.trim() : null,
+        occasion: occasionValue,
+        occasionDate: _selectedOccasion == 'Other' ? null : _occasionDate?.toIso8601String(),
+        description: null,
         plantCost: _selectedPlant!.costRs,
         paymentScreenshotUrl: screenshotUrl,
       );
@@ -105,11 +140,14 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
         _formKey.currentState!.reset();
         setState(() {
           _selectedPlant = null;
+          _selectedOccasion = null;
+          _occasionDate = null;
           _paymentScreenshot = null;
           _showQr = false;
           _isSubmitting = false;
         });
-        _descriptionCtrl.clear();
+        _treeNameCtrl.clear();
+        _customOccasionCtrl.clear();
       }
     } catch (e) {
       if (mounted) {
@@ -226,12 +264,61 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
             ],
 
             const SizedBox(height: 16),
-            _label('Reason / Description'),
+            _label("Tree's Name (Optional)"),
             TextFormField(
-              controller: _descriptionCtrl,
-              maxLines: 3,
-              decoration: _dec('Why you want this tree'),
+              controller: _treeNameCtrl,
+              decoration: _dec('e.g., Arjun\'s Neem'),
             ),
+
+            const SizedBox(height: 16),
+            _label('Occasion (Optional)'),
+            DropdownButtonFormField<String>(
+              value: _selectedOccasion,
+              decoration: _dec('Select Occasion'),
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF1B4332)),
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              items: _occasions.map((occ) {
+                return DropdownMenuItem(value: occ, child: Text(occ));
+              }).toList(),
+              onChanged: (val) => setState(() => _selectedOccasion = val),
+            ),
+
+            if (_selectedOccasion == 'Other') ...[
+              const SizedBox(height: 16),
+              _label('Please specify the occasion'),
+              TextFormField(
+                controller: _customOccasionCtrl,
+                decoration: _dec('e.g., Graduation, New Job'),
+                validator: (val) => val == null || val.trim().isEmpty ? 'Please enter an occasion' : null,
+              ),
+            ] else if (_selectedOccasion != null) ...[
+              const SizedBox(height: 16),
+              _label('Occasion Date'),
+              InkWell(
+                onTap: () => _selectDate(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _occasionDate == null 
+                            ? 'Select Date' 
+                            : DateFormat('MMM dd, yyyy').format(_occasionDate!),
+                        style: TextStyle(color: _occasionDate == null ? Colors.grey.shade600 : Colors.black87, fontSize: 15),
+                      ),
+                      const Icon(Icons.calendar_today_rounded, color: Color(0xFF1B4332), size: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ],
 
             // ── GPay QR Section ────────────────────────────────────────────
             if (_showQr && _selectedPlant != null) ...[

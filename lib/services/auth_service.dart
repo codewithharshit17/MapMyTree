@@ -11,13 +11,14 @@ class AuthService {
   Future<User?> signUpUserWithEmail({
     required String name,
     required String email,
+    required String phone,
     required String password,
   }) async {
     try {
       final res = await _supabase.auth.signUp(
         email: email,
         password: password,
-        data: {'name': name, 'role': 'user'},
+        data: {'name': name, 'phone': phone, 'role': 'user'},
       );
       if (res.user != null) {
         await handlePostLogin(res.user!);
@@ -48,6 +49,7 @@ class AuthService {
           'registration_number': registrationNumber,
           'contact_phone': contactPhone,
           'address': address,
+          'is_verified': false,
         },
       );
       if (res.user != null) {
@@ -127,14 +129,31 @@ class AuthService {
     final email = user.email;
     if (email == null) return;
 
-    final ngoEmails = [
-      'ngo1@gmail.com',
-      'ngo2@gmail.com',
-      'ngo3@gmail.com',
-      'ngo4@gmail.com',
-    ];
+    // 1. Check if user already has a role in metadata
+    String? role = user.userMetadata?['role'];
 
-    final role = ngoEmails.contains(email) ? 'ngo' : 'user';
+    // 2. Fetch existing profile role if not present in metadata
+    if (role == null) {
+      try {
+        final data = await _supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
+        role = data?['role'];
+      } catch (_) {}
+    }
+
+    // 3. Fallback logic for Google Sign In or legacy test users
+    if (role == null) {
+      final ngoEmails = [
+        'ngo1@gmail.com',
+        'ngo2@gmail.com',
+        'ngo3@gmail.com',
+        'ngo4@gmail.com',
+      ];
+      role = ngoEmails.contains(email) ? 'ngo' : 'user';
+    }
 
     try {
       await _supabase.from('profiles').upsert({
@@ -142,6 +161,8 @@ class AuthService {
         'email': email,
         'role': role,
         'full_name': user.userMetadata?['name'] ?? user.userMetadata?['full_name'],
+        'phone_number': user.userMetadata?['phone'] ?? user.userMetadata?['contact_phone'],
+        'is_verified': user.userMetadata?['is_verified'] ?? true, // Regular users get true, NGOs get false unless verified manually
       });
     } catch (e) {
       debugPrint('handlePostLogin upsert error: $e');
@@ -166,6 +187,24 @@ class AuthService {
   // --- RESET PASSWORD ---
   Future<void> sendPasswordResetEmail(String email) async {
     await _supabase.auth.resetPasswordForEmail(email);
+  }
+
+  // --- UPDATE PROFILE ---
+  Future<void> updateProfile({required String fullName, String? phoneNumber, String? avatarUrl}) async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      final updates = <String, dynamic>{
+        'full_name': fullName,
+      };
+      if (phoneNumber != null) updates['phone_number'] = phoneNumber;
+      if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
+      
+      await _supabase.from('profiles').update(updates).eq('id', user.id);
+    } catch (e) {
+      debugPrint('Error updating profile: $e');
+      throw AuthException(e.toString());
+    }
   }
 
   // --- SIGN OUT ---
