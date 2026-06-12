@@ -1,6 +1,8 @@
 # 🌳 MapMyTree - Flutter App
 
-A beautiful Flutter recreation of the MapMyTree Mobile App UI, originally designed in Figma.
+
+
+<img width="1747" height="843" alt="Screenshot 2026-06-12 233407" src="https://github.com/user-attachments/assets/2eaf58e1-20bf-44e5-b80a-2afb30edda41" />
 
 ## ✨ Screens
 
@@ -108,4 +110,4 @@ This app utilizes a modern Flutter stack:
 
 ---
 
-> Inspired by the [Figma design](https://www.figma.com/design/4pgztiVJOIOFNZsHcQRYgG/MapMyTree-Mobile-App-UI) by codewithharshit17
+
