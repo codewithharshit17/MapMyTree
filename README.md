@@ -636,9 +636,6 @@ We welcome contributions from the community! Here's how you can help:
 
 ## ❓ FAQ
 
-**Q: Can I use MapMyTree for commercial purposes?**
-A: Please review the license file. Contact the maintainers for licensing inquiries.
-
 **Q: How often is the tree data updated?**
 A: Real-time updates via Supabase subscriptions. Manual updates via NGO dashboard.
 
@@ -655,20 +652,6 @@ A: Flutter Web support is possible. Currently focused on iOS and Android.
 A: Email security concerns directly to the maintainers (do not open public issues).
 
 ---
-
-## 📄 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](./LICENSE) file for details.
-
----
-
-## 📞 Support & Contact
-
-- **Project Lead**: [Your Name]
-- **Email**: contact@mapmytree.app
-- **GitHub Issues**: [MapMyTree/issues](https://github.com/yourusername/MapMyTree/issues)
-- **Documentation**: [Wiki](https://github.com/yourusername/MapMyTree/wiki)
-- **Community**: Join our [Discord Server](https://discord.gg/your-invite-code)
 
 ---
 
