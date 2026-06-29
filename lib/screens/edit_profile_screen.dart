@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/profile_model.dart';
@@ -75,9 +76,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
       
       if (mounted) {
-        await context.read<AppAuthProvider>().refreshUserData();
-        Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
+        final authProvider = context.read<AppAuthProvider>();
+        final navigator = Navigator.of(context);
+        final messenger = ScaffoldMessenger.of(context);
+        
+        await authProvider.refreshUserData();
+        
+        navigator.pop(true);
+        messenger.showSnackBar(
           const SnackBar(content: Text('Profile updated successfully'), backgroundColor: Color(0xFF1B4332)),
         );
       }
@@ -118,7 +124,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       backgroundColor: Colors.grey.shade300,
                       backgroundImage: _selectedImage != null
                           ? FileImage(_selectedImage!)
-                          : (_currentAvatarUrl != null ? NetworkImage(_currentAvatarUrl!) : null) as ImageProvider?,
+                          : (_currentAvatarUrl != null ? CachedNetworkImageProvider(_currentAvatarUrl!) : null) as ImageProvider?,
                       child: _selectedImage == null && _currentAvatarUrl == null
                           ? Text(
                               widget.profile.initials,

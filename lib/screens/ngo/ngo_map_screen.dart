@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
-import '../../core/session_helper.dart';
 import '../../models/new_tree_model.dart';
 import '../../services/new_tree_service.dart';
 import '../../services/location_service.dart';

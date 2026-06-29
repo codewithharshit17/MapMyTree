@@ -12,12 +12,39 @@ import 'storage_service.dart';
 class NewTreeService {
   final SupabaseClient _db = Supabase.instance.client;
 
+  bool _isValidUuid(String? id) {
+    if (id == null) return false;
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    );
+    return uuidRegex.hasMatch(id);
+  }
+
   /// Insert a new tree. Tries Supabase first, falls back to local storage.
   Future<String?> insertTree(Map<String, dynamic> data) async {
-    final result =
-        await _db.from('trees').insert(data).select('id').single();
-    debugPrint('NewTreeService: saved to Supabase ✓');
-    return result['id'] as String?;
+    try {
+      final dbData = Map<String, dynamic>.from(data);
+      
+      // Clean up fields that fail database UUID validation if they are mock local IDs
+      if (dbData.containsKey('request_id') && !_isValidUuid(dbData['request_id']?.toString())) {
+        dbData.remove('request_id');
+      }
+      if (dbData.containsKey('planted_for_user_id') && !_isValidUuid(dbData['planted_for_user_id']?.toString())) {
+        dbData.remove('planted_for_user_id');
+      }
+      if (dbData.containsKey('ngo_id') && !_isValidUuid(dbData['ngo_id']?.toString())) {
+        dbData.remove('ngo_id');
+      }
+
+      final result =
+          await _db.from('trees').insert(dbData).select('id').single();
+      debugPrint('NewTreeService: saved to Supabase ✓');
+      return result['id'] as String?;
+    } catch (e) {
+      debugPrint('NewTreeService: Supabase insert failed ($e), falling back to local storage.');
+      final localId = await LocalTreeStorage.saveTree(data);
+      return localId;
+    }
   }
 
   /// Update a tree.
@@ -77,7 +104,7 @@ class NewTreeService {
         await LocalTreeStorage.removeTree(originalLocalId);
         syncedCount++;
       } catch (e) {
-        debugPrint('Failed to sync tree \${treeData['tree_id']}: $e');
+        debugPrint('Failed to sync tree ${treeData['tree_id']}: $e');
       }
     }
     return syncedCount;
@@ -308,7 +335,7 @@ class NewTreeService {
           .gte('planted_date', currentMonthStart.toIso8601String())
           .count(CountOption.exact);
 
-      return count.count ?? 0;
+      return count.count;
     } catch (e) {
       debugPrint('getTreesThisMonth error: $e');
       return 0; // Fallback to 0

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import '../../core/dev_session.dart';
 import '../../core/session_helper.dart';
@@ -19,10 +21,39 @@ class NgoShellScreen extends StatefulWidget {
 
 class _NgoShellScreenState extends State<NgoShellScreen> {
   int _currentTab = 0;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      if (results.isNotEmpty && !results.contains(ConnectivityResult.none)) {
+        _syncOfflineDataSilently();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _syncOfflineDataSilently() async {
+    try {
+      final count = await NewTreeService().syncOfflineTrees();
+      if (count > 0 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🔄 Background Sync: Successfully synced $count offline trees!'),
+            backgroundColor: const Color(0xFF1B4332),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Background sync failed: $e');
+    }
   }
 
   static const List<_TabConfig> _tabs = [

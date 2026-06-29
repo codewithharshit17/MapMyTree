@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/session_helper.dart';
+import '../../core/dev_session.dart';
 import '../../models/request_model.dart';
 import '../../services/new_tree_service.dart';
 import '../../services/request_service.dart';
@@ -79,7 +80,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
             }
             _selectedRequest = _pendingRequests.firstWhere((r) => r.id == widget.prefilledRequest!.id);
             _treeNameController.text = _selectedRequest!.treeName ?? '';
-            _speciesController.text = _selectedRequest!.treeType ?? '';
+            _speciesController.text = _selectedRequest!.treeType;
           }
         });
       }
@@ -214,6 +215,10 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_capturedPhoto == null) {
+      _showError('Geotagged Photo is required. Please capture or select a photo.');
+      return;
+    }
     if (_latitude == null || _longitude == null) {
       // Show a warning but allow submission for testing
       final confirm = await showDialog<bool>(
@@ -525,9 +530,9 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
                               color: Color(0xFF1B4332),
                             ),
                           ),
-                          if ((widget.prefilledRequest!.treeType ?? '').isNotEmpty)
+                          if (widget.prefilledRequest!.treeType.isNotEmpty)
                             Text(
-                              widget.prefilledRequest!.treeType!,
+                              widget.prefilledRequest!.treeType,
                               style: const TextStyle(fontSize: 13, color: Colors.grey),
                             ),
                         ],
@@ -564,8 +569,8 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
                           if (v.treeName != null && v.treeName!.isNotEmpty) {
                             _treeNameController.text = v.treeName!;
                           }
-                          if (v.treeType != null && v.treeType!.isNotEmpty) {
-                            _speciesController.text = v.treeType!;
+                          if (v.treeType.isNotEmpty) {
+                            _speciesController.text = v.treeType;
                           }
                         } else {
                           _treeNameController.clear();
@@ -605,7 +610,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
             // Landowner details
             _buildLabel('Type of Landowner *'),
             DropdownButtonFormField<String>(
-              value: _selectedLandownerType,
+              initialValue: _selectedLandownerType,
               decoration: _inputDecoration('Select land ownership type'),
               items: const [
                 DropdownMenuItem(value: 'Private land', child: Text('Private land')),

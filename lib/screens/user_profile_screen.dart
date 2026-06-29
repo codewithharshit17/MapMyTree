@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/profile_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/new_tree_service.dart';
@@ -115,7 +116,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 CircleAvatar(
                   radius: 50,
                   backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  backgroundImage: _profile!.avatarUrl != null ? NetworkImage(_profile!.avatarUrl!) : null,
+                  backgroundImage: _profile!.avatarUrl != null ? CachedNetworkImageProvider(_profile!.avatarUrl!) : null,
                   child: _profile!.avatarUrl == null
                       ? Text(
                           _profile!.initials,

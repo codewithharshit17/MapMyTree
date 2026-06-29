@@ -10,6 +10,7 @@ import '../models/new_tree_model.dart';
 import '../screens/ngo/edit_tree_screen.dart';
 import '../screens/ngo/tree_info_screen.dart';
 import '../screens/user_profile_screen.dart';
+import 'shimmer_loading.dart';
 
 class TreeDetailBottomSheet extends StatelessWidget {
   final NewTreeModel tree;
@@ -48,7 +49,7 @@ class TreeDetailBottomSheet extends StatelessWidget {
                         )
                       : CachedNetworkImage(
                           imageUrl: tree.firstPhotoUrl, height: 200, width: double.infinity, fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(height: 200, color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator())),
+                          placeholder: (_, __) => const ShimmerLoading(height: 200, borderRadius: 16),
                           errorWidget: (_, __, ___) => Container(height: 200, color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image, size: 48, color: Colors.grey))),
                         ),
                 )

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/request_model.dart';
 import '../core/dev_session.dart';
+import '../core/session_helper.dart';
 import 'local_tree_storage.dart';
 
 class RequestService {
@@ -71,7 +72,7 @@ class RequestService {
         'plant_cost': plantCost,
         'payment_screenshot_url': paymentScreenshotUrl,
         'payment_status': paymentStatus,
-        'user_name': 'Unknown User',
+        'user_name': SessionHelper.userName.isNotEmpty ? SessionHelper.userName : 'Unknown User',
       });
     }
   }

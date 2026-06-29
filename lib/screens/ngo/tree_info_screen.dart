@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../widgets/shimmer_loading.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -111,6 +112,7 @@ class _TreeInfoScreenState extends State<TreeInfoScreen> {
                        width: double.infinity,
                        height: 250,
                        fit: BoxFit.cover,
+                       placeholder: (context, url) => const ShimmerLoading(height: 250, borderRadius: 0),
                        errorWidget: (context, url, err) => Container(
                          height: 250,
                          color: Colors.grey.shade300,

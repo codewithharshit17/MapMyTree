@@ -103,6 +103,14 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_paymentScreenshot == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Payment screenshot is required to verify your request.'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
     setState(() => _isSubmitting = true);
 
     try {
@@ -186,11 +194,23 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
             // ── Plant Dropdown ──────────────────────────────────────────────
             _label('Select Plant *'),
             DropdownButtonFormField<_PlantOption>(
-              value: _selectedPlant,
+              initialValue: _selectedPlant,
               isExpanded: true,
               itemHeight: 60,
               decoration: _dec('Choose a plant...'),
               icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF1B4332)),
+              selectedItemBuilder: (BuildContext context) {
+                return _plantOptions.map<Widget>((plant) {
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${plant.emoji}  ${plant.name} (${plant.localName}) - ₹${plant.costRs}',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList();
+              },
               dropdownColor: Colors.white,
               borderRadius: BorderRadius.circular(14),
               items: _plantOptions.map((plant) {
@@ -273,7 +293,7 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
             const SizedBox(height: 16),
             _label('Occasion (Optional)'),
             DropdownButtonFormField<String>(
-              value: _selectedOccasion,
+              initialValue: _selectedOccasion,
               decoration: _dec('Select Occasion'),
               icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF1B4332)),
               dropdownColor: Colors.white,

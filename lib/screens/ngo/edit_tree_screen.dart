@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../core/session_helper.dart';
@@ -231,7 +232,7 @@ class _UpdateTile extends StatelessWidget {
         if (update.photoUrls.isNotEmpty) ...[const SizedBox(height: 8),
           SizedBox(height: 80, child: ListView(scrollDirection: Axis.horizontal, children: update.photoUrls.map((url) =>
             Container(width: 80, height: 80, margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)))).toList()))],
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), image: DecorationImage(image: CachedNetworkImageProvider(url), fit: BoxFit.cover)))).toList()))],
       ]),
     );
   }

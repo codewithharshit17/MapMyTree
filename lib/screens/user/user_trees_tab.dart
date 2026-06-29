@@ -8,6 +8,7 @@ import '../../models/request_model.dart';
 import '../../services/new_tree_service.dart';
 import '../../services/request_service.dart';
 import '../../widgets/tree_detail_bottom_sheet.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class UserTreesTab extends StatefulWidget {
   const UserTreesTab({super.key});
@@ -275,6 +276,7 @@ class _TreeCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: tree.firstPhotoUrl.isNotEmpty
                 ? CachedNetworkImage(imageUrl: tree.firstPhotoUrl, width: 64, height: 64, fit: BoxFit.cover,
+                    placeholder: (_, __) => const ShimmerLoading(width: 64, height: 64, borderRadius: 12),
                     errorWidget: (_, __, ___) => _placeholder())
                 : _placeholder(),
           ),
