@@ -11,15 +11,18 @@ class AuthService {
   Future<User?> signUpUserWithEmail({
     required String name,
     required String email,
+    required String phone,
     required String password,
   }) async {
     try {
       final res = await _supabase.auth.signUp(
         email: email,
         password: password,
-        data: {'name': name, 'role': 'user'},
+        data: {'name': name, 'phone': phone, 'role': 'user'},
       );
-      // The backend Postgres Trigger will now automatically create the public.users row.
+      if (res.user != null) {
+        await handlePostLogin(res.user!);
+      }
       return res.user;
     } catch (e) {
       debugPrint('User sign up error: $e');
@@ -46,9 +49,12 @@ class AuthService {
           'registration_number': registrationNumber,
           'contact_phone': contactPhone,
           'address': address,
+          'is_verified': false,
         },
       );
-      // The backend Postgres Trigger will now automatically create the public.users and public.ngos rows.
+      if (res.user != null) {
+        await handlePostLogin(res.user!);
+      }
       return res.user;
     } catch (e) {
       debugPrint('NGO sign up error: $e');
@@ -63,6 +69,9 @@ class AuthService {
         email: email,
         password: password,
       );
+      if (res.user != null) {
+        await handlePostLogin(res.user!);
+      }
       return res.user;
     } catch (e) {
       debugPrint('Sign in error: $e');
@@ -88,10 +97,13 @@ class AuthService {
         throw 'No ID Token found.';
       }
 
-      await _supabase.auth.signInWithIdToken(
+      final res = await _supabase.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
       );
+      if (res.user != null) {
+        await handlePostLogin(res.user!);
+      }
     } catch (e) {
       debugPrint('Native Google sign in error: $e');
       rethrow;
@@ -109,6 +121,51 @@ class AuthService {
       return data?['role'] ?? 'user';
     } catch (e) {
       return 'user';
+    }
+  }
+
+  // --- POST LOGIN ROLE ASSIGNMENT (UPSERT PROFILE) ---
+  Future<void> handlePostLogin(User user) async {
+    final email = user.email;
+    if (email == null) return;
+
+    // 1. Check if user already has a role in metadata
+    String? role = user.userMetadata?['role'];
+
+    // 2. Fetch existing profile role if not present in metadata
+    if (role == null) {
+      try {
+        final data = await _supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
+        role = data?['role'];
+      } catch (_) {}
+    }
+
+    // 3. Fallback logic for Google Sign In or legacy test users
+    if (role == null) {
+      final ngoEmails = [
+        'ngo1@gmail.com',
+        'ngo2@gmail.com',
+        'ngo3@gmail.com',
+        'ngo4@gmail.com',
+      ];
+      role = ngoEmails.contains(email) ? 'ngo' : 'user';
+    }
+
+    try {
+      await _supabase.from('profiles').upsert({
+        'id': user.id,
+        'email': email,
+        'role': role,
+        'full_name': user.userMetadata?['name'] ?? user.userMetadata?['full_name'],
+        'phone_number': user.userMetadata?['phone'] ?? user.userMetadata?['contact_phone'],
+        'is_verified': user.userMetadata?['is_verified'] ?? true, // Regular users get true, NGOs get false unless verified manually
+      });
+    } catch (e) {
+      debugPrint('handlePostLogin upsert error: $e');
     }
   }
 
@@ -130,6 +187,24 @@ class AuthService {
   // --- RESET PASSWORD ---
   Future<void> sendPasswordResetEmail(String email) async {
     await _supabase.auth.resetPasswordForEmail(email);
+  }
+
+  // --- UPDATE PROFILE ---
+  Future<void> updateProfile({required String fullName, String? phoneNumber, String? avatarUrl}) async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      final updates = <String, dynamic>{
+        'full_name': fullName,
+      };
+      if (phoneNumber != null) updates['phone_number'] = phoneNumber;
+      if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
+      
+      await _supabase.from('profiles').update(updates).eq('id', user.id);
+    } catch (e) {
+      debugPrint('Error updating profile: $e');
+      throw AuthException(e.toString());
+    }
   }
 
   // --- SIGN OUT ---

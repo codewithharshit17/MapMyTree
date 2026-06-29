@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../core/session_helper.dart';
@@ -7,6 +8,7 @@ import '../../models/new_tree_model.dart';
 import '../../models/tree_update_model.dart';
 import '../../services/new_tree_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/notification_service.dart';
 
 class EditTreeScreen extends StatefulWidget {
   final NewTreeModel tree;
@@ -18,6 +20,7 @@ class EditTreeScreen extends StatefulWidget {
 class _EditTreeScreenState extends State<EditTreeScreen> {
   final _treeService = NewTreeService();
   final _storageService = StorageService();
+  final _notificationService = NotificationService();
   late TextEditingController _notesCtrl;
   late TextEditingController _speciesCtrl;
   late String _healthStatus;
@@ -59,6 +62,17 @@ class _EditTreeScreenState extends State<EditTreeScreen> {
         'tree_species': _speciesCtrl.text.trim(),
         'health_status': _healthStatus,
       });
+
+      if (widget.tree.plantedForUserId != null && widget.tree.plantedForUserId!.isNotEmpty) {
+        await _notificationService.createNotification(
+          userId: widget.tree.plantedForUserId!,
+          title: 'Tree Details Updated',
+          message: 'An NGO just updated the details for your tree: ${widget.tree.treeName}',
+          type: 'tree_update',
+          relatedTreeId: widget.tree.id,
+        );
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('✅ Tree updated!'), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating));
@@ -86,6 +100,18 @@ class _EditTreeScreenState extends State<EditTreeScreen> {
         'photo_urls': photoUrls,
         'health_status': _healthStatus,
       });
+
+      if (widget.tree.plantedForUserId != null && widget.tree.plantedForUserId!.isNotEmpty) {
+        await _notificationService.createNotification(
+          userId: widget.tree.plantedForUserId!,
+          title: 'New Tree Progress!',
+          message: 'An NGO posted a new update and photo for your tree: ${widget.tree.treeName}',
+          type: 'tree_update',
+          relatedTreeId: widget.tree.id,
+          imageUrl: photoUrls.isNotEmpty ? photoUrls.first : null,
+        );
+      }
+
       _updateNoteCtrl.clear();
       setState(() { _updatePhoto = null; });
       await _loadUpdates();
@@ -206,7 +232,7 @@ class _UpdateTile extends StatelessWidget {
         if (update.photoUrls.isNotEmpty) ...[const SizedBox(height: 8),
           SizedBox(height: 80, child: ListView(scrollDirection: Axis.horizontal, children: update.photoUrls.map((url) =>
             Container(width: 80, height: 80, margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), image: DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)))).toList()))],
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), image: DecorationImage(image: CachedNetworkImageProvider(url), fit: BoxFit.cover)))).toList()))],
       ]),
     );
   }

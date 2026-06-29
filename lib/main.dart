@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/splash_screen.dart';
 import 'app_theme.dart';
 import 'providers/auth_provider.dart';
@@ -12,11 +13,17 @@ import 'screens/ngo/tree_info_screen.dart';
 
 // TODO: Replace these with your actual Supabase project values from:
 // Supabase Dashboard → Project Settings → API
-const String _supabaseUrl = 'https://mkghlxbdwnigpjfvomgb.supabase.co';
-const String _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZ2hseGJkd25pZ3BqZnZvbWdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNzkzMzMsImV4cCI6MjA4OTg1NTMzM30.coP_jg5OwuwYtFheJ1kkDcHBRwXXusVlwg0pyrEPh1s';
+const String _supabaseUrl = 'https://lkfhtwtmdiwcyriejcwy.supabase.co';
+const String _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrZmh0d3RtZGl3Y3lyaWVqY3d5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTUxMDQsImV4cCI6MjA5MTIzMTEwNH0.5Bu5w3hvcreFqZL7rj5w4-w2UGgUWDGdQ3QS5YDAE3o';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint('Error loading .env file: $e');
+  }
 
   await Supabase.initialize(
     url: _supabaseUrl,

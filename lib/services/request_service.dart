@@ -1,14 +1,34 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/request_model.dart';
 import '../core/dev_session.dart';
+import '../core/session_helper.dart';
 import 'local_tree_storage.dart';
 
 class RequestService {
   final SupabaseClient _db = Supabase.instance.client;
 
-  // NOTE: The Supabase table is 'update_requests', not 'requests'.
-  static const _table = 'update_requests';
+  // NOTE: The Supabase table is 'requests', matching the new schema.
+  static const _table = 'requests';
+
+  /// Upload payment screenshot to Supabase Storage.
+  /// Returns the public URL, or null on failure.
+  Future<String?> uploadPaymentScreenshot(File file, String userId) async {
+    try {
+      final ext = file.path.split('.').last;
+      final fileName = 'payment_${userId}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final bytes = await file.readAsBytes();
+      await _db.storage
+          .from('payment-screenshots')
+          .uploadBinary(fileName, bytes, fileOptions: FileOptions(contentType: 'image/$ext', upsert: true));
+      final url = _db.storage.from('payment-screenshots').getPublicUrl(fileName);
+      return url;
+    } catch (e) {
+      debugPrint('RequestService uploadPaymentScreenshot error: $e');
+      return null;
+    }
+  }
 
   /// Create a new tree request from a user.
   Future<void> createRequest({
@@ -16,14 +36,26 @@ class RequestService {
     required String treeType,
     String? preferredLocation,
     String? description,
+    String? treeName,
+    String? occasion,
+    String? occasionDate,
+    int? plantCost,
+    String? paymentScreenshotUrl,
   }) async {
+    final paymentStatus = paymentScreenshotUrl != null ? 'pending_verification' : 'unpaid';
     try {
       await _db.from(_table).insert({
         'user_id': userId,
         'tree_type': treeType,
         'preferred_location': preferredLocation,
         'description': description,
+        'tree_name': treeName,
+        'occasion': occasion,
+        'occasion_date': occasionDate,
         'status': 'pending',
+        'plant_cost': plantCost,
+        'payment_screenshot_url': paymentScreenshotUrl,
+        'payment_status': paymentStatus,
       });
     } catch (e) {
       debugPrint('RequestService createRequest error: $e');
@@ -33,21 +65,26 @@ class RequestService {
         'tree_type': treeType,
         'preferred_location': preferredLocation,
         'description': description,
+        'tree_name': treeName,
+        'occasion': occasion,
+        'occasion_date': occasionDate,
         'status': 'pending',
-        'user_name': 'Unknown User',
+        'plant_cost': plantCost,
+        'payment_screenshot_url': paymentScreenshotUrl,
+        'payment_status': paymentStatus,
+        'user_name': SessionHelper.userName.isNotEmpty ? SessionHelper.userName : 'Unknown User',
       });
     }
   }
 
+
   /// Get all pending requests (for NGO). Merges Supabase + local.
   Future<List<RequestModel>> getPendingRequests() async {
-    // Seed demo requests on first call so NGO has something to work with
-    await LocalTreeStorage.seedDemoRequests();
     final local = await LocalTreeStorage.getPendingRequests();
     try {
       final rows = await _db
           .from(_table)
-          .select()
+          .select('*, profiles(full_name)')
           .eq('status', 'pending');
       final remote = rows.map((r) => RequestModel.fromJson(r)).toList();
       // Merge: remote first, then local-only
@@ -71,7 +108,7 @@ class RequestService {
     try {
       final rows = await _db
           .from(_table)
-          .select()
+          .select('*, profiles(full_name)')
           .eq('status', 'completed');
       final remote = rows.map((r) => RequestModel.fromJson(r)).toList();
       final remoteIds = remote.map((r) => r.id).toSet();
@@ -152,11 +189,28 @@ class RequestService {
           .from(_table)
           .stream(primaryKey: ['id'])
           .asyncMap((rows) async {
+            // Fetch User profiles to attach names safely
+            Map<String, String> profileNames = {};
+            try {
+              final List<dynamic> allProfiles = await _db.from('profiles').select('id, full_name, email');
+              for (var p in allProfiles) {
+                profileNames[p['id'].toString()] = p['full_name']?.toString() ?? p['email']?.toString() ?? 'User';
+              }
+            } catch (e) {
+              debugPrint('Failed to load profiles for stream: $e');
+            }
+
             final remote = rows
                 .where((r) => r['status'] == 'pending')
-                .map((r) => RequestModel.fromJson(r))
+                .map((r) {
+                   final String uid = r['user_id']?.toString() ?? '';
+                   if (profileNames.containsKey(uid)) {
+                     r['user_name'] = profileNames[uid];
+                   }
+                   return RequestModel.fromJson(r);
+                })
                 .toList();
-            await LocalTreeStorage.seedDemoRequests();
+
             final local = await LocalTreeStorage.getPendingRequests();
             final remoteIds = remote.map((r) => r.id).toSet();
             final localOnly = local.where((r) => !remoteIds.contains(r.id)).toList();
@@ -181,6 +235,19 @@ class RequestService {
           'RequestService updateRequestStatus (Supabase) error: $e (local updated)');
     }
   }
+
+  /// Update payment status (for NGO verification).
+  Future<void> updatePaymentStatus(String requestId, String paymentStatus) async {
+    try {
+      await _db
+          .from(_table)
+          .update({'payment_status': paymentStatus}).eq('id', requestId);
+    } catch (e) {
+      debugPrint('RequestService updatePaymentStatus error: $e');
+    }
+  }
+
+
 
   /// Get count of pending requests.
   Future<int> getPendingRequestCount() async {

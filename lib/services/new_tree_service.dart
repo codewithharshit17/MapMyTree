@@ -2,24 +2,47 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/new_tree_model.dart';
 import '../models/tree_update_model.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../core/dev_session.dart';
 import 'local_tree_storage.dart';
+import 'storage_service.dart';
 
 class NewTreeService {
   final SupabaseClient _db = Supabase.instance.client;
 
+  bool _isValidUuid(String? id) {
+    if (id == null) return false;
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    );
+    return uuidRegex.hasMatch(id);
+  }
+
   /// Insert a new tree. Tries Supabase first, falls back to local storage.
   Future<String?> insertTree(Map<String, dynamic> data) async {
     try {
+      final dbData = Map<String, dynamic>.from(data);
+      
+      // Clean up fields that fail database UUID validation if they are mock local IDs
+      if (dbData.containsKey('request_id') && !_isValidUuid(dbData['request_id']?.toString())) {
+        dbData.remove('request_id');
+      }
+      if (dbData.containsKey('planted_for_user_id') && !_isValidUuid(dbData['planted_for_user_id']?.toString())) {
+        dbData.remove('planted_for_user_id');
+      }
+      if (dbData.containsKey('ngo_id') && !_isValidUuid(dbData['ngo_id']?.toString())) {
+        dbData.remove('ngo_id');
+      }
+
       final result =
-          await _db.from('trees').insert(data).select('id').single();
+          await _db.from('trees').insert(dbData).select('id').single();
       debugPrint('NewTreeService: saved to Supabase ✓');
       return result['id'] as String?;
     } catch (e) {
-      debugPrint('NewTreeService insertTree (Supabase) failed: $e');
-      debugPrint('NewTreeService: falling back to local storage...');
-      // Fallback: save locally
-      final localId = await LocalTreeStorage.saveTree(Map.from(data));
+      debugPrint('NewTreeService: Supabase insert failed ($e), falling back to local storage.');
+      final localId = await LocalTreeStorage.saveTree(data);
       return localId;
     }
   }
@@ -35,6 +58,58 @@ class NewTreeService {
     }
   }
 
+  /// Sync offline trees to Supabase
+  Future<int> syncOfflineTrees() async {
+    final storageService = StorageService();
+    final localTrees = await LocalTreeStorage.getAllTreesRaw();
+    final unsynced = localTrees.where((t) => t['id'] != null && t['id'].toString().startsWith('local-tree-')).toList();
+    int syncedCount = 0;
+
+    for (var treeData in unsynced) {
+      try {
+        final originalLocalId = treeData['id'];
+        final treeIdString = treeData['tree_id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+        
+        // Remove locally assigned structural fields that shouldn't be overridden in the DB schema
+        final dbData = Map<String, dynamic>.from(treeData);
+        dbData.remove('id'); 
+        dbData.remove('created_at');
+        dbData.remove('updated_at');
+
+        // Handle photo uploads for local:// URIs
+        List<String> newPhotoUrls = [];
+        final rawPhotos = dbData['photo_urls'];
+        if (rawPhotos != null && rawPhotos is List) {
+          for (String url in rawPhotos) {
+            if (url.startsWith('local://')) {
+              final localPath = url.replaceFirst('local://', '');
+              final file = File(localPath);
+              if (await file.exists()) {
+                final publicUrl = await storageService.uploadTreePhoto(file, treeIdString);
+                if (publicUrl != null && !publicUrl.startsWith('local://')) {
+                  newPhotoUrls.add(publicUrl);
+                }
+              }
+            } else {
+              newPhotoUrls.add(url);
+            }
+          }
+        }
+        dbData['photo_urls'] = newPhotoUrls;
+
+        // Insert into Supabase
+        await insertTree(dbData);
+        
+        // Remove from local cache
+        await LocalTreeStorage.removeTree(originalLocalId);
+        syncedCount++;
+      } catch (e) {
+        debugPrint('Failed to sync tree ${treeData['tree_id']}: $e');
+      }
+    }
+    return syncedCount;
+  }
+
   /// Get all trees for an NGO (merged from Supabase + local storage).
   Future<List<NewTreeModel>> getTreesForNgo(String ngoId) async {
     final local = await LocalTreeStorage.getTreesForNgo(ngoId);
@@ -42,7 +117,6 @@ class NewTreeService {
       final rows = await _db
           .from('trees')
           .select()
-          .eq('ngo_id', ngoId)
           .order('planted_date', ascending: false);
       final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
       // Merge: remote + local (avoid duplicates by ID)
@@ -51,7 +125,59 @@ class NewTreeService {
       return [...remote, ...localOnly];
     } catch (e) {
       debugPrint('NewTreeService getTreesForNgo (Supabase) error: $e');
+      debugPrint('NewTreeService getTreesForNgo (Supabase) error: $e');
       return local;
+    }
+  }
+
+  /// Export trees for an NGO to a CSV file and share it.
+  Future<void> exportTreesToCsv(String ngoId) async {
+    try {
+      final trees = await getTreesForNgo(ngoId);
+
+      // Create CSV header
+      final StringBuffer csvBuffer = StringBuffer();
+      csvBuffer.writeln('Tree ID,Unique ID,Name,Species,Planted Date,Health Status,Latitude,Longitude,Exact Location,Notes,Planted By');
+
+      // Add tree rows
+      for (final tree in trees) {
+        final lat = tree.latitude.toString();
+        final lng = tree.longitude.toString();
+        final date = tree.plantingDate.toIso8601String().split('T')[0];
+        
+        // Escape quotes and commas in fields
+        String escapeField(String? field) {
+          if (field == null) return '';
+          final text = field.replaceAll('"', '""');
+          if (text.contains(',') || text.contains('"') || text.contains('\n')) {
+            return '"$text"';
+          }
+          return text;
+        }
+
+        csvBuffer.writeln(
+          '${escapeField(tree.id)},${escapeField(tree.treeId)},${escapeField(tree.treeName)},'
+          '${escapeField(tree.treeSpecies)},${escapeField(date)},${escapeField(tree.healthStatus)},'
+          '${escapeField(lat)},${escapeField(lng)},${escapeField(tree.exactLocation)},'
+          '${escapeField(tree.notes)},${escapeField(tree.plantedBy)}'
+        );
+      }
+
+      // Write to temp directory
+      final directory = await getTemporaryDirectory();
+      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+      final File file = File('${directory.path}/mapmytree_export_$timestamp.csv');
+      await file.writeAsString(csvBuffer.toString());
+
+      // Share the file
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path)],
+        subject: 'MapMyTree Export Data',
+        text: 'Attached is the exported tree data.',
+      ));
+    } catch (e) {
+      debugPrint('Error exporting trees: $e');
+      rethrow;
     }
   }
 
@@ -76,7 +202,6 @@ class NewTreeService {
       return _db
           .from('trees')
           .stream(primaryKey: ['id'])
-          .eq('ngo_id', ngoId)
           .asyncMap((rows) async {
             final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
             final local = await LocalTreeStorage.getTreesForNgo(ngoId);
@@ -125,6 +250,8 @@ class NewTreeService {
             final localOnly = local.where((t) => !remoteIds.contains(t.id)).toList();
             debugPrint('NewTreeService: Merged Result: ${remote.length} remote, ${localOnly.length} local-only');
             return [...remote, ...localOnly];
+          }).handleError((error) {
+            debugPrint('streamUserTrees realtime error caught: $error');
           });
     } catch (e) {
       debugPrint('streamUserTrees error: $e');
@@ -137,6 +264,32 @@ class NewTreeService {
     }
   }
 
+  /// Stream ALL public trees for the maps (matches remote + local cached trees)
+  Stream<List<NewTreeModel>> streamAllPublicTrees() {
+    try {
+      return _db
+          .from('trees')
+          .stream(primaryKey: ['id'])
+          .asyncMap((rows) async {
+            final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
+            
+            // Bring back local trees so they aren't lost
+            final allLocalRaw = await LocalTreeStorage.getAllTreesRaw();
+            final local = allLocalRaw.map((r) => NewTreeModel.fromJson(r)).toList();
+            
+            final remoteIds = remote.map((t) => t.id).toSet();
+            final localOnly = local.where((t) => !remoteIds.contains(t.id)).toList();
+            
+            return [...remote, ...localOnly];
+          }).handleError((error) {
+            debugPrint('streamAllPublicTrees realtime error caught: $error');
+          });
+    } catch (e) {
+      debugPrint('streamAllPublicTrees error: $e');
+      return Stream.value([]);
+    }
+  }
+
   /// Get recent trees for NGO (merged from Supabase + local).
   Future<List<NewTreeModel>> getRecentTrees(String ngoId,
       {int limit = 5}) async {
@@ -145,7 +298,6 @@ class NewTreeService {
       final rows = await _db
           .from('trees')
           .select()
-          .eq('ngo_id', ngoId)
           .order('planted_date', ascending: false)
           .limit(limit);
       final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
@@ -164,7 +316,7 @@ class NewTreeService {
     final localCount = await LocalTreeStorage.getTreeCount(ngoId);
     try {
       final rows =
-          await _db.from('trees').select('id').eq('ngo_id', ngoId);
+          await _db.from('trees').select('id');
       return rows.length + localCount;
     } catch (e) {
       return localCount;
@@ -173,18 +325,37 @@ class NewTreeService {
 
   /// Get trees planted this month for NGO (merged).
   Future<int> getTreesThisMonth(String ngoId) async {
-    final localCount = await LocalTreeStorage.getTreesThisMonth(ngoId);
     try {
       final now = DateTime.now();
-      final firstOfMonth = DateTime(now.year, now.month, 1);
-      final rows = await _db
+      final currentMonthStart = DateTime(now.year, now.month, 1);
+
+      final count = await _db
           .from('trees')
           .select('id')
-          .eq('ngo_id', ngoId)
-          .gte('planted_date', firstOfMonth.toIso8601String().split('T')[0]);
-      return rows.length + localCount;
+          .gte('planted_date', currentMonthStart.toIso8601String())
+          .count(CountOption.exact);
+
+      return count.count;
     } catch (e) {
-      return localCount;
+      debugPrint('getTreesThisMonth error: $e');
+      return 0; // Fallback to 0
+    }
+  }
+
+  /// Calculates Survival Rate percentage
+  Future<double> getSurvivalRate(String ngoId) async {
+    try {
+      final trees = await _db
+          .from('trees')
+          .select('health_status');
+
+      if (trees.isEmpty) return 0.0;
+      
+      int survivalCount = trees.where((t) => t['health_status'] == 'healthy' || t['health_status'] == 'needs_attention').length;
+      return (survivalCount / trees.length) * 100;
+    } catch (e) {
+      debugPrint('getSurvivalRate error: $e');
+      return 0.0;
     }
   }
 
@@ -197,7 +368,6 @@ class NewTreeService {
       final rows = await _db
           .from('trees')
           .select('planted_date')
-          .eq('ngo_id', ngoId)
           .gte('planted_date', sixMonthsAgo.toIso8601String().split('T')[0]);
 
       final Map<String, int> remoteStats = {};

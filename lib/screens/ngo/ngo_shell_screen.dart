@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import '../../core/dev_session.dart';
 import '../../core/session_helper.dart';
@@ -7,6 +9,8 @@ import 'add_tree_screen.dart';
 import 'ngo_map_screen.dart';
 import 'ngo_requests_tab.dart';
 import 'qr_scanner_screen.dart';
+import '../../services/new_tree_service.dart';
+import '../user_profile_screen.dart';
 
 class NgoShellScreen extends StatefulWidget {
   const NgoShellScreen({super.key});
@@ -17,13 +21,38 @@ class NgoShellScreen extends StatefulWidget {
 
 class _NgoShellScreenState extends State<NgoShellScreen> {
   int _currentTab = 0;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
-    // Activate dev session if auth is bypassed
-    if (!DevSession().isActive) {
-      DevSession().loginAsNGO();
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      if (results.isNotEmpty && !results.contains(ConnectivityResult.none)) {
+        _syncOfflineDataSilently();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _syncOfflineDataSilently() async {
+    try {
+      final count = await NewTreeService().syncOfflineTrees();
+      if (count > 0 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🔄 Background Sync: Successfully synced $count offline trees!'),
+            backgroundColor: const Color(0xFF1B4332),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Background sync failed: $e');
     }
   }
 
@@ -52,7 +81,14 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: _currentTab == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _currentTab != 0) {
+          setState(() => _currentTab = 0);
+        }
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFFF5F7F5),
       appBar: _currentTab == 4
           ? null
@@ -78,11 +114,63 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_outlined),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Notifications coming soon')));
+                  icon: const Icon(Icons.download_rounded),
+                  tooltip: 'Export Trees to CSV',
+                  onPressed: () async {
+                    try {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Generating CSV...')),
+                      );
+                      await NewTreeService().exportTreesToCsv(SessionHelper.userId);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Export failed: $e')),
+                        );
+                      }
+                    }
                   },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.cloud_sync_rounded),
+                  tooltip: 'Sync Offline Data',
+                  onPressed: () async {
+                    try {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Syncing offline data...')),
+                      );
+                      final count = await NewTreeService().syncOfflineTrees();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(count > 0 ? 'Successfully synced $count items!' : 'Everything is up to date.'), backgroundColor: const Color(0xFF1B4332)),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Sync failed: $e'), backgroundColor: Colors.red),
+                        );
+                      }
+                    }
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(
+                         builder: (_) => UserProfileScreen(userId: SessionHelper.userId),
+                      ));
+                    },
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.white24,
+                      child: Text(
+                        SessionHelper.userName.isNotEmpty ? SessionHelper.userName[0].toUpperCase() : '?',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.logout_rounded),
@@ -104,7 +192,7 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
           const AddTreeScreen(),
           const NgoMapScreen(),
           const NgoRequestsTab(),
-          const QrScannerScreen(),
+          QrScannerScreen(isActive: _currentTab == 4),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -124,6 +212,7 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
                 ))
             .toList(),
       ),
+    ),
     );
   }
 }
