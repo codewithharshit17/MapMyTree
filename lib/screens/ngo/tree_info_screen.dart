@@ -13,6 +13,7 @@ import '../../core/session_helper.dart';
 import '../../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'edit_tree_screen.dart';
+import '../../core/qr_download_helper.dart';
 
 class TreeInfoScreen extends StatefulWidget {
   final String treeId;
@@ -45,11 +46,12 @@ class _TreeInfoScreenState extends State<TreeInfoScreen> {
   }
 
   void _shareTree(NewTreeModel t) {
-    if (t.qrCodeUrl != null) {
-      SharePlus.instance.share(ShareParams(text: 'Check out this 🌳 ${t.treeName} planted via MapMyTree!\nView the tree: ${t.qrCodeUrl}'));
-    } else {
-      SharePlus.instance.share(ShareParams(text: 'Check out this 🌳 ${t.treeName} planted via MapMyTree! Tree ID: ${t.treeId ?? t.id}'));
-    }
+    final uniqueId = t.treeId ?? t.id;
+    final rawUrl = t.qrCodeUrl ?? 'https://mapmytree.app/tree/$uniqueId';
+    final url = rawUrl.startsWith('https://mapmytree.app/tree/') 
+        ? rawUrl.replaceFirst('https://mapmytree.app/tree/', 'https://codewithharshit17.github.io/MapMyTree/tree.html?id=')
+        : rawUrl;
+    SharePlus.instance.share(ShareParams(text: 'Check out this 🌳 ${t.treeName} planted via MapMyTree!\nView the tree: $url'));
   }
 
   @override
@@ -187,36 +189,45 @@ class _TreeInfoScreenState extends State<TreeInfoScreen> {
                    const SizedBox(height: 32),
                    
                    // QR Code Section
-                   Builder(
-                     builder: (context) {
-                       final uniqueId = t.treeId ?? t.id;
-                       final url = t.qrCodeUrl ?? 'https://mapmytree.app/tree/$uniqueId';
-                       return Center(
-                         child: Column(
-                           children: [
-                             const Text('Scan to view this page again', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                             const SizedBox(height: 12),
-                             Container(
-                               padding: const EdgeInsets.all(16),
-                               decoration: BoxDecoration(
-                                 color: Colors.white,
-                                 borderRadius: BorderRadius.circular(20),
-                                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5))],
-                               ),
-                               child: QrImageView(
-                                 data: url,
-                                 version: QrVersions.auto,
-                                 size: 160.0,
-                                 backgroundColor: Colors.white,
-                               ),
-                             ),
-                             const SizedBox(height: 12),
-                             Text(uniqueId, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1B4332), fontSize: 16)),
-                           ],
-                         ),
-                       );
-                     }
-                   ),
+                    Builder(
+                      builder: (context) {
+                        final uniqueId = t.treeId ?? t.id;
+                        final rawUrl = t.qrCodeUrl ?? 'https://mapmytree.app/tree/$uniqueId';
+                        final url = rawUrl.startsWith('https://mapmytree.app/tree/') 
+                            ? rawUrl.replaceFirst('https://mapmytree.app/tree/', 'https://codewithharshit17.github.io/MapMyTree/tree.html?id=')
+                            : rawUrl;
+                        return Center(
+                          child: Column(
+                            children: [
+                              const Text('Scan to view this page again', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                              const SizedBox(height: 12),
+                              GestureDetector(
+                                onTap: () => QrDownloadHelper.downloadOrShareQrCode(context, url, uniqueId),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5))],
+                                  ),
+                                  child: Tooltip(
+                                    message: 'Click to download/share QR Code',
+                                    child: QrImageView(
+                                      data: url,
+                                      version: QrVersions.auto,
+                                      size: 160.0,
+                                      backgroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(uniqueId, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1B4332), fontSize: 16)),
+                            ],
+                          ),
+                        );
+                      }
+                    ),
                    const SizedBox(height: 40),
                 ],
               )

@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Information | MapMyTree</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+        :root {
+            --primary: #1B4332;
+            --primary-light: #2D6A4F;
+            --accent: #52B788;
+            --bg-gradient-start: #081C15;
+            --bg-gradient-end: #1B4332;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-main: #2D3748;
+            --text-muted: #718096;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: var(--text-main);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 520px;
+            perspective: 1000px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 28px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            position: relative;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.7));
+            height: 200px;
+            display: flex;
+            align-items: flex-end;
+            padding: 24px;
+            color: white;
+        }
+
+        .header-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+            transition: scale 0.5s ease;
+        }
+
+        .card:hover .header-bg {
+            scale: 1.05;
+        }
+
+        .header-title-box {
+            width: 100%;
+        }
+
+        .ngo-badge {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--primary-light);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tree-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 800;
+            line-height: 1.2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .tree-subtitle {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 2px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .card-body {
+            padding: 28px;
+        }
+
+        .info-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .info-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(82, 183, 136, 0.15);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary-light);
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .info-content {
+            flex-grow: 1;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .info-val {
+            font-size: 0.95rem;
+            color: var(--text-main);
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .info-val a {
+            color: var(--primary-light);
+            text-decoration: none;
+            border-bottom: 1.5px solid var(--accent);
+            padding-bottom: 1px;
+            font-weight: 700;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .status-healthy {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+
+        .status-attention {
+            background: #FFFDE7;
+            color: #F57F17;
+        }
+
+        .status-dead {
+            background: #FFEBEE;
+            color: #C62828;
+        }
+
+        .map-section {
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 24px 0;
+            border: 2px solid rgba(0,0,0,0.05);
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        #map {
+            width: 100%;
+            height: 160px;
+            z-index: 1;
+        }
+
+        .section-divider {
+            height: 1px;
+            background: #E2E8F0;
+            margin: 20px 0;
+        }
+
+        .qr-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            background: #F7FAFC;
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px dashed #CBD5E0;
+        }
+
+        .qr-header {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+        }
+
+        .qr-id {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        #qrcode {
+            background: white;
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 8px;
+        }
+
+        /* Loading / Error States */
+        .loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            color: white;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 40px 28px;
+            text-align: center;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            color: #E53E3E;
+            margin-bottom: 16px;
+        }
+
+        .error-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .error-desc {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <!-- Loading Screen -->
+        <div id="loading" class="loading-screen">
+            <div class="spinner"></div>
+            <p style="font-weight: 600; font-size: 1.1rem; letter-spacing: 0.5px;">Fetching Tree details...</p>
+        </div>
+
+        <!-- Main Card (Initially Hidden) -->
+        <div id="card" class="card" style="display: none;">
+            <div class="card-header">
+                <img id="header-bg" class="header-bg" src="https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=80" alt="Tree Cover">
+                <div class="header-title-box">
+                    <span id="ngo-badge" class="ngo-badge">MapMyTree NGO</span>
+                    <h1 id="tree-title" class="tree-title">Tree Name</h1>
+                    <p id="tree-subtitle" class="tree-subtitle">Scientific Name</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <!-- Planted Date -->
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fa-regular fa-calendar-days"></i></div>
+                        <div class="info-content">
+                            <div class="info-label">Planted</div>
+                            <div id="planted-date" class="info-val">Planted Date</div>
+                        </div>
+                    </div>
+
+                    <!-- Landowner -->
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fa-solid fa-mountain"></i></div>
+                        <div class="info-content">
+                            <div class="info-label">Landowner</div>
+                            <div id="landowner" class="info-val">Landowner Info</div>
+                        </div>
+                    </div>
+
+                    <!-- Planted For -->
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fa-solid fa-user"></i></div>
+                        <div class="info-content">
+                            <div class="info-label">Planted For</div>
+                            <div id="planted-for" class="info-val">Planted For Name</div>
+                        </div>
+                    </div>
+
+                    <!-- Location -->
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fa-solid fa-location-dot"></i></div>
+                        <div class="info-content">
+                            <div class="info-label">Location</div>
+                            <div id="location" class="info-val">Location Details</div>
+                        </div>
+                    </div>
+
+                    <!-- Coordinates -->
+                    <div class="info-row">
+                        <div class="info-icon"><i class="fa-solid fa-earth-americas"></i></div>
+                        <div class="info-content">
+                            <div class="info-label">Coordinates</div>
+                            <div id="coordinates" class="info-val">Lat/Lng</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Leaflet Map -->
+                <div class="map-section">
+                    <div id="map"></div>
+                </div>
+
+                <!-- Status & Notes Divider -->
+                <div class="info-row" style="margin-bottom: 20px;">
+                    <div class="info-icon"><i class="fa-solid fa-heart"></i></div>
+                    <div class="info-content" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div class="info-label">Status</div>
+                            <div id="status-badge-container">
+                                <span id="status-badge" class="status-badge status-healthy">Healthy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes (Conditional) -->
+                <div id="notes-container" class="info-row" style="display: none; margin-bottom: 24px;">
+                    <div class="info-icon"><i class="fa-regular fa-comment-dots"></i></div>
+                    <div class="info-content">
+                        <div class="info-label">Notes</div>
+                        <div id="notes" class="info-val" style="font-weight: 500; font-style: italic;">Notes details...</div>
+                    </div>
+                </div>
+
+                <!-- QR Section -->
+                <div class="qr-section">
+                    <div class="qr-header">Tree QR Code</div>
+                    <div id="qr-id" class="qr-id">MMT-000000000000-0000</div>
+                    <div id="qrcode"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Card (Initially Hidden) -->
+        <div id="error" class="error-card" style="display: none;">
+            <div class="error-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h2 id="error-title" class="error-title">Tree Not Found</h2>
+            <p id="error-desc" class="error-desc">The requested tree details could not be found. Please check if the URL or QR scanned is valid.</p>
+        </div>
+    </div>
+
+    <!-- Leaflet Map JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- QrCode JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+        const SUPABASE_URL = "https://lkfhtwtmdiwcyriejcwy.supabase.co";
+        const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrZmh0d3RtZGl3Y3lyaWVqY3d5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTUxMDQsImV4cCI6MjA5MTIzMTEwNH0.5Bu5w3hvcreFqZL7rj5w4-w2UGgUWDGdQ3QS5YDAE3o";
+
+        // Parse query params
+        const urlParams = new URLSearchParams(window.location.search);
+        const treeId = urlParams.get('id');
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            if (!treeId) {
+                showError("Invalid URL", "No tree ID provided in the URL.");
+                return;
+            }
+
+            try {
+                // Fetch tree details from Supabase
+                const headers = {
+                    "apikey": ANON_KEY,
+                    "Authorization": `Bearer ${ANON_KEY}`
+                };
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/trees?tree_id=eq.${treeId}&select=*`, { headers });
+                
+                if (!res.ok) {
+                    throw new Error(`DB Error: status ${res.status}`);
+                }
+
+                const trees = await res.json();
+                if (!trees || trees.length === 0) {
+                    showError("Tree Not Found", `We couldn't find any tree with ID: ${treeId}`);
+                    return;
+                }
+
+                const tree = trees[0];
+                await renderTreeCard(tree, headers);
+            } catch (e) {
+                console.error(e);
+                showError("Network Error", "Unable to connect to the server. Please try again later.");
+            }
+        });
+
+        async function renderTreeCard(tree, headers) {
+            // Fetch NGO Name and Planted For User Name if available
+            let ngoName = "MapMyTree NGO";
+            let plantedForName = "User";
+
+            if (tree.ngo_id) {
+                try {
+                    const resNgo = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${tree.ngo_id}&select=full_name`, { headers });
+                    if (resNgo.ok) {
+                        const profiles = await resNgo.json();
+                        if (profiles && profiles.length > 0) ngoName = profiles[0].full_name || ngoName;
+                    }
+                } catch(e) {}
+            }
+
+            if (tree.planted_for_user_id) {
+                try {
+                    const resUser = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${tree.planted_for_user_id}&select=full_name`, { headers });
+                    if (resUser.ok) {
+                        const profiles = await resUser.json();
+                        if (profiles && profiles.length > 0) plantedForName = profiles[0].full_name || plantedForName;
+                    }
+                } catch(e) {}
+            }
+
+            // Fill text values
+            document.getElementById('ngo-badge').textContent = ngoName;
+            document.getElementById('tree-title').textContent = tree.tree_name || "Planted Tree";
+            document.getElementById('tree-subtitle').textContent = tree.scientific_name || tree.tree_species || "Unknown Species";
+            
+            // Format planted date
+            let formattedDate = "N/A";
+            if (tree.planted_date) {
+                const dateObj = new Date(tree.planted_date);
+                if (!isNaN(dateObj)) {
+                    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                    formattedDate = dateObj.toLocaleDateString('en-US', options);
+                }
+            }
+            document.getElementById('planted-date').textContent = formattedDate;
+
+            // Landowner
+            let landownerText = "N/A";
+            if (tree.landownership_type) {
+                landownerText = tree.landownership_type;
+                if (tree.landowner_name) landownerText += ` (${tree.landowner_name})`;
+            }
+            document.getElementById('landowner').textContent = landownerText;
+
+            // Planted For
+            document.getElementById('planted-for').innerHTML = `<a href="#">${plantedForName}</a>`;
+
+            // Location
+            document.getElementById('location').textContent = tree.exact_location || "Unknown Location";
+
+            // Coordinates
+            document.getElementById('coordinates').textContent = `Lat: ${tree.latitude.toFixed(4)}, Lng: ${tree.longitude.toFixed(4)}`;
+
+            // Health Status
+            const statusEl = document.getElementById('status-badge');
+            const status = (tree.health_status || 'healthy').toLowerCase();
+            if (status === 'healthy') {
+                statusEl.textContent = "Healthy";
+                statusEl.className = "status-badge status-healthy";
+            } else if (status === 'needs_attention' || status === 'attention') {
+                statusEl.textContent = "Needs Attention";
+                statusEl.className = "status-badge status-attention";
+            } else {
+                statusEl.textContent = "Dead";
+                statusEl.className = "status-badge status-dead";
+            }
+
+            // Photo
+            if (tree.photo_urls && tree.photo_urls.length > 0) {
+                const photo = tree.photo_urls[0];
+                if (photo.startsWith('http')) {
+                    document.getElementById('header-bg').src = photo;
+                }
+            }
+
+            // Notes
+            if (tree.notes && tree.notes.trim() !== '') {
+                document.getElementById('notes').textContent = tree.notes;
+                document.getElementById('notes-container').style.display = 'flex';
+            }
+
+            // Generate QR code
+            document.getElementById('qr-id').textContent = tree.tree_id || tree.id;
+            const finalUrl = `https://codewithharshit17.github.io/MapMyTree/tree.html?id=${tree.tree_id || tree.id}`;
+            new QRCode(document.getElementById("qrcode"), {
+                text: finalUrl,
+                width: 128,
+                height: 128,
+                colorDark : "#1B4332",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.M
+            });
+
+            // Set page title
+            document.title = `🌳 ${tree.tree_name || 'Tree Details'} | MapMyTree`;
+
+            // Hide loading, show card
+            document.getElementById('loading').style.display = 'none';
+            const cardEl = document.getElementById('card');
+            cardEl.style.display = 'block';
+
+            // Load Map
+            initMap(tree.latitude, tree.longitude, tree.tree_name);
+        }
+
+        function initMap(lat, lng, name) {
+            const map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([lat, lng], 14);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+            // Green icon marker
+            const greenIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            });
+
+            L.marker([lat, lng], {icon: greenIcon}).addTo(map)
+                .bindPopup(`<b>${name || 'Planted Tree'}</b>`)
+                .openPopup();
+        }
+
+        function showError(title, desc) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-title').textContent = title;
+            document.getElementById('error-desc').textContent = desc;
+            document.getElementById('error').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

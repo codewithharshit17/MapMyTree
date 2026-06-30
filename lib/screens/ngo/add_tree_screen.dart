@@ -16,6 +16,7 @@ import '../../services/notification_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../core/qr_download_helper.dart';
 class AddTreeScreen extends StatefulWidget {
   final RequestModel? prefilledRequest;
   const AddTreeScreen({super.key, this.prefilledRequest});
@@ -253,7 +254,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
       final uuid = const Uuid().v4();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final generatedTreeId = 'MMT-$timestamp-${uuid.substring(0, 4)}';
-      final qrCodeUrl = 'https://mapmytree.app/tree/$generatedTreeId';
+      final qrCodeUrl = 'https://codewithharshit17.github.io/MapMyTree/tree.html?id=$generatedTreeId';
 
       // Insert tree
       final treeData = <String, dynamic>{
@@ -365,11 +366,17 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
                           const SizedBox(height: 12),
                           const Divider(),
                           const SizedBox(height: 12),
-                          QrImageView(
-                            data: qrCodeUrl,
-                            version: QrVersions.auto,
-                            size: 150.0,
-                            backgroundColor: Colors.transparent,
+                           GestureDetector(
+                            onTap: () => QrDownloadHelper.downloadOrShareQrCode(context, qrCodeUrl, generatedTreeId),
+                            child: Tooltip(
+                              message: 'Click to download/share QR Code',
+                              child: QrImageView(
+                                data: qrCodeUrl,
+                                version: QrVersions.auto,
+                                size: 150.0,
+                                backgroundColor: Colors.transparent,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 12),
                           const Text('Scan this QR in the app to view tree details',

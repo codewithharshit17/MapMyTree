@@ -11,6 +11,7 @@ import '../screens/ngo/edit_tree_screen.dart';
 import '../screens/ngo/tree_info_screen.dart';
 import '../screens/user_profile_screen.dart';
 import 'shimmer_loading.dart';
+import '../core/qr_download_helper.dart';
 
 class TreeDetailBottomSheet extends StatelessWidget {
   final NewTreeModel tree;
@@ -123,7 +124,10 @@ class TreeDetailBottomSheet extends StatelessWidget {
               Builder(
                 builder: (BuildContext context) {
                   final uniqueId = tree.treeId ?? tree.id;
-                  final url = tree.qrCodeUrl ?? 'https://mapmytree.app/tree/$uniqueId';
+                  final rawUrl = tree.qrCodeUrl ?? 'https://mapmytree.app/tree/$uniqueId';
+                  final url = rawUrl.startsWith('https://mapmytree.app/tree/')
+                      ? rawUrl.replaceFirst('https://mapmytree.app/tree/', 'https://codewithharshit17.github.io/MapMyTree/tree.html?id=')
+                      : rawUrl;
                   
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,19 +143,25 @@ class TreeDetailBottomSheet extends StatelessWidget {
                           Text(uniqueId,
                               style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600, letterSpacing: 0.5)),
                           const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade200),
-                              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
-                            ),
-                            child: QrImageView(
-                              data: url,
-                              version: QrVersions.auto,
-                              size: 160,
-                              backgroundColor: Colors.white,
+                          GestureDetector(
+                            onTap: () => QrDownloadHelper.downloadOrShareQrCode(context, url, uniqueId),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
+                              ),
+                              child: Tooltip(
+                                message: 'Click to download/share QR Code',
+                                child: QrImageView(
+                                  data: url,
+                                  version: QrVersions.auto,
+                                  size: 160,
+                                  backgroundColor: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
