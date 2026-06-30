@@ -34,8 +34,15 @@ class QrDownloadHelper {
         gapless: true,
       );
 
-      // Generate the image canvas
-      final image = await painter.toImage(400);
+      // Generate the image canvas with a solid white background
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      final backgroundPaint = Paint()..color = Colors.white;
+      canvas.drawRect(const Rect.fromLTWH(0, 0, 400, 400), backgroundPaint);
+      painter.paint(canvas, const Size(400, 400));
+      
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(400, 400);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
         throw 'Failed to convert QR code painter to image bytes';
