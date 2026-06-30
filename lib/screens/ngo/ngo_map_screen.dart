@@ -21,7 +21,7 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
   final _locationService = LocationService();
   final _mapController = MapController();
 
-  final LatLng _center = const LatLng(20.5937, 78.9629); // Default: India center
+  final LatLng _center = const LatLng(19.1365, 72.9206); // Default: Mumbai-Thane region
   bool _isSatellite = false;
   NgoMapFilter _filter = NgoMapFilter.all;
 
@@ -70,7 +70,7 @@ class _NgoMapScreenState extends State<NgoMapScreen> {
               mapController: _mapController,
               options: MapOptions(
                 initialCenter: _center,
-                initialZoom: 5,
+                initialZoom: 11,
               ),
               children: [
                 TileLayer(

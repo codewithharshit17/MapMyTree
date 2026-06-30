@@ -87,7 +87,7 @@ class _UserMapScreenState extends State<UserMapScreen> {
           )).toList();
           return FlutterMap(
             mapController: _mapController,
-            options: const MapOptions(initialCenter: LatLng(20.5937, 78.9629), initialZoom: 5),
+            options: const MapOptions(initialCenter: LatLng(19.1365, 72.9206), initialZoom: 11),
             children: [
                 TileLayer(
                   urlTemplate: _isSatellite
