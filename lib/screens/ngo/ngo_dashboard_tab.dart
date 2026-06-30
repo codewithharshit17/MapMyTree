@@ -8,6 +8,7 @@ import '../../services/request_service.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/tree_detail_bottom_sheet.dart';
 
 class NgoDashboardTab extends StatefulWidget {
   const NgoDashboardTab({super.key});
@@ -405,11 +406,20 @@ class _RecentTreeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) => TreeDetailBottomSheet(tree: tree, isNgo: true),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
@@ -446,6 +456,6 @@ class _RecentTreeTile extends StatelessWidget {
         )),
         Text(tree.healthEmoji, style: const TextStyle(fontSize: 18)),
       ]),
-    );
+    ));
   }
 }
