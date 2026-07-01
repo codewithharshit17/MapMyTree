@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/new_tree_model.dart';
+import '../core/dev_session.dart';
 import '../models/request_model.dart';
 
 /// Offline-first local storage for trees and requests.
@@ -10,6 +11,7 @@ import '../models/request_model.dart';
 class LocalTreeStorage {
   static const _treesKey = 'local_trees';
   static const _requestsKey = 'local_requests';
+  static bool _isSeeded = false;
   static final StreamController<List<Map<String, dynamic>>> _treeController = StreamController.broadcast();
   static final StreamController<List<Map<String, dynamic>>> _requestController = StreamController.broadcast();
 
@@ -69,10 +71,17 @@ class LocalTreeStorage {
 
   /// Get trees for a specific NGO.
   static Future<List<NewTreeModel>> getTreesForNgo(String ngoId) async {
-    await seedDemoTreesForNgo(ngoId);
+    if (DevSession().isActive) {
+      await seedDemoTreesForNgo(ngoId);
+    }
     
     final all = await getAllTreesRaw();
     final filtered = all.where((r) => r['ngo_id'] == ngoId).toList();
+    
+    if (!DevSession().isActive) {
+      filtered.removeWhere((r) => r['id'] != null && r['id'].toString().startsWith('seed-tree-'));
+    }
+
     // Sort by created_at descending
     filtered.sort((a, b) {
       final aDate = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(0);
@@ -86,10 +95,48 @@ class LocalTreeStorage {
   static Future<void> seedDemoTreesForNgo(String ngoId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final existing = await getAllTreesRaw();
       
-      // Remove any existing seeded trees to ensure exactly 25 demo trees
-      existing.removeWhere((t) => t['id'] != null && t['id'].toString().contains('seed'));
+      // Check if already initialized and contains exactly 25 sample trees
+      final existing = await getAllTreesRaw();
+      final sampleTrees = existing.where((t) {
+        final idStr = t['id']?.toString() ?? '';
+        final treeIdStr = t['tree_id']?.toString() ?? '';
+        final treeNameStr = t['tree_name']?.toString() ?? '';
+        
+        final isSeedId = idStr.contains('seed') || idStr.startsWith('seed-tree-');
+        final isSeedTreeId = treeIdStr.startsWith('MMT-APR-') || 
+                             treeIdStr.startsWith('MMT-MAY-') || 
+                             treeIdStr.startsWith('MMT-JUN-');
+        final isSeedName = treeNameStr.contains('April Neem Tree') || 
+                           treeNameStr.contains('May Banyan Tree') || 
+                           treeNameStr.contains('June Mango Tree');
+                           
+        return isSeedId || isSeedTreeId || isSeedName;
+      }).toList();
+
+      final isInitialized = prefs.getBool('is_sample_data_initialized_$ngoId') ?? false;
+      
+      if (isInitialized && sampleTrees.length == 25) {
+        // Sample trees are already correctly initialized, skip completely
+        return;
+      }
+
+      // Perform one-time cleanup of all duplicates and old seeds
+      existing.removeWhere((t) {
+        final idStr = t['id']?.toString() ?? '';
+        final treeIdStr = t['tree_id']?.toString() ?? '';
+        final treeNameStr = t['tree_name']?.toString() ?? '';
+        
+        final isSeedId = idStr.contains('seed') || idStr.startsWith('seed-tree-');
+        final isSeedTreeId = treeIdStr.startsWith('MMT-APR-') || 
+                             treeIdStr.startsWith('MMT-MAY-') || 
+                             treeIdStr.startsWith('MMT-JUN-');
+        final isSeedName = treeNameStr.contains('April Neem Tree') || 
+                           treeNameStr.contains('May Banyan Tree') || 
+                           treeNameStr.contains('June Mango Tree');
+                           
+        return isSeedId || isSeedTreeId || isSeedName;
+      });
 
       final List<Map<String, dynamic>> newTrees = [];
 
@@ -132,7 +179,7 @@ class LocalTreeStorage {
         final treeName = '$monthName $commonName Tree $i';
 
         newTrees.add({
-          'id': 'local-tree-seed-$i',
+          'id': 'seed-tree-$i',
           'tree_id': treeId,
           'tree_name': treeName,
           'tree_species': species,
@@ -150,8 +197,9 @@ class LocalTreeStorage {
 
       existing.addAll(newTrees);
       await prefs.setString(_treesKey, jsonEncode(existing));
+      await prefs.setBool('is_sample_data_initialized_$ngoId', true);
       _treeController.add(existing);
-      debugPrint('LocalTreeStorage: Seeded 25 demo trees for NGO $ngoId');
+      debugPrint('LocalTreeStorage: Seeded 25 unique demo trees for NGO $ngoId');
     } catch (e) {
       debugPrint('LocalTreeStorage seedDemoTreesForNgo error: $e');
     }

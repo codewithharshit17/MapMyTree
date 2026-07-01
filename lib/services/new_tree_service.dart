@@ -334,6 +334,9 @@ class NewTreeService {
   Future<List<NewTreeModel>> getRecentTrees(String ngoId,
       {int limit = 5}) async {
     final local = await LocalTreeStorage.getRecentTrees(ngoId, limit: limit);
+    if (DevSession().isActive) {
+      return local;
+    }
     try {
       final rows = await _db
           .from('trees')
@@ -354,6 +357,9 @@ class NewTreeService {
   /// Get total tree count for NGO (merged).
   Future<int> getTreeCount(String ngoId) async {
     final localCount = await LocalTreeStorage.getTreeCount(ngoId);
+    if (DevSession().isActive) {
+      return localCount;
+    }
     try {
       final rows =
           await _db.from('trees').select('id');
@@ -384,6 +390,12 @@ class NewTreeService {
 
   /// Calculates Survival Rate percentage
   Future<double> getSurvivalRate(String ngoId) async {
+    if (DevSession().isActive) {
+      final local = await LocalTreeStorage.getTreesForNgo(ngoId);
+      if (local.isEmpty) return 0.0;
+      int survivalCount = local.where((t) => t.healthStatus == 'healthy' || t.healthStatus == 'needs_attention').length;
+      return (survivalCount / local.length) * 100;
+    }
     try {
       final trees = await _db
           .from('trees')
@@ -402,6 +414,9 @@ class NewTreeService {
   /// Get monthly tree stats for last 6 months (merged).
   Future<Map<String, int>> getMonthlyStats(String ngoId) async {
     final localStats = await LocalTreeStorage.getMonthlyStats(ngoId);
+    if (DevSession().isActive) {
+      return localStats;
+    }
     try {
       final sixMonthsAgo =
           DateTime.now().subtract(const Duration(days: 180));
