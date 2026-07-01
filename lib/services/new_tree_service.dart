@@ -290,6 +290,46 @@ class NewTreeService {
     }
   }
 
+  /// Get paginated trees for a specific NGO, sorted by planted_date descending.
+  Future<List<NewTreeModel>> getPaginatedTreesForNgo({
+    required String ngoId,
+    required int limit,
+    required int offset,
+  }) async {
+    final local = await LocalTreeStorage.getTreesForNgo(ngoId);
+    local.sort((a, b) => b.plantingDate.compareTo(a.plantingDate));
+
+    if (DevSession().isActive) {
+      if (offset >= local.length) return [];
+      final end = (offset + limit) < local.length ? (offset + limit) : local.length;
+      return local.sublist(offset, end);
+    }
+
+    try {
+      final rows = await _db
+          .from('trees')
+          .select()
+          .eq('ngo_id', ngoId)
+          .order('planted_date', ascending: false)
+          .range(offset, offset + limit - 1);
+
+      final remote = rows.map((r) => NewTreeModel.fromJson(r)).toList();
+
+      List<NewTreeModel> localOnly = [];
+      if (offset == 0) {
+        final remoteIds = remote.map((t) => t.id).toSet();
+        localOnly = local.where((t) => !remoteIds.contains(t.id)).toList();
+      }
+
+      return [...localOnly, ...remote];
+    } catch (e) {
+      debugPrint('NewTreeService getPaginatedTreesForNgo (Supabase) error: $e');
+      if (offset >= local.length) return [];
+      final end = (offset + limit) < local.length ? (offset + limit) : local.length;
+      return local.sublist(offset, end);
+    }
+  }
+
   /// Get recent trees for NGO (merged from Supabase + local).
   Future<List<NewTreeModel>> getRecentTrees(String ngoId,
       {int limit = 5}) async {

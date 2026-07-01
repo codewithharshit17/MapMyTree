@@ -69,6 +69,8 @@ class LocalTreeStorage {
 
   /// Get trees for a specific NGO.
   static Future<List<NewTreeModel>> getTreesForNgo(String ngoId) async {
+    await seedDemoTreesForNgo(ngoId);
+    
     final all = await getAllTreesRaw();
     final filtered = all.where((r) => r['ngo_id'] == ngoId).toList();
     // Sort by created_at descending
@@ -78,6 +80,81 @@ class LocalTreeStorage {
       return bDate.compareTo(aDate);
     });
     return filtered.map((r) => NewTreeModel.fromJson(r)).toList();
+  }
+
+  /// Seed 25 demo trees for testing pagination and sorting
+  static Future<void> seedDemoTreesForNgo(String ngoId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = await getAllTreesRaw();
+      
+      // Remove any existing seeded trees to ensure exactly 25 demo trees
+      existing.removeWhere((t) => t['id'] != null && t['id'].toString().contains('seed'));
+
+      final List<Map<String, dynamic>> newTrees = [];
+
+      final List<String> speciesList = [
+        'Azadirachta indica (Neem)',
+        'Mangifera indica (Mango)',
+        'Ficus benghalensis (Banyan)',
+        'Ficus religiosa (Peepal)',
+        'Swietenia mahagoni (Mahogany)',
+        'Delonix regia (Gulmohar)',
+        'Cocos nucifera (Coconut)',
+      ];
+      
+      final List<String> commonNames = [
+        'Neem',
+        'Mango',
+        'Banyan',
+        'Peepal',
+        'Mahogany',
+        'Gulmohar',
+        'Coconut',
+      ];
+
+      final List<String> months = [
+        '', 'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+
+      // Generate exactly 25 trees with dates from April, May, and June 2026.
+      for (int i = 1; i <= 25; i++) {
+        // Distribute dates: June 25th, subtracting 3 days per tree
+        final plantingDate = DateTime(2026, 6, 25).subtract(Duration(days: i * 3));
+        final speciesIndex = (i - 1) % speciesList.length;
+        final species = speciesList[speciesIndex];
+        final commonName = commonNames[speciesIndex];
+        final monthName = months[plantingDate.month];
+        final monthShort = monthName.substring(0, 3).toUpperCase();
+        
+        final treeId = 'MMT-$monthShort-${i.toString().padLeft(3, '0')}';
+        final treeName = '$monthName $commonName Tree $i';
+
+        newTrees.add({
+          'id': 'local-tree-seed-$i',
+          'tree_id': treeId,
+          'tree_name': treeName,
+          'tree_species': species,
+          'planted_date': plantingDate.toIso8601String().split('T')[0],
+          'latitude': 12.9716 + (i * 0.0012),
+          'longitude': 77.5946 - (i * 0.0008),
+          'exact_location': 'City Park, Zone ${String.fromCharCode(65 + (i % 4))}$i',
+          'health_status': i % 6 == 0 ? 'needs_attention' : (i % 11 == 0 ? 'dead' : 'healthy'),
+          'ngo_id': ngoId,
+          'created_at': plantingDate.toIso8601String(),
+          'updated_at': plantingDate.toIso8601String(),
+          'photo_urls': <String>[],
+        });
+      }
+
+      existing.addAll(newTrees);
+      await prefs.setString(_treesKey, jsonEncode(existing));
+      _treeController.add(existing);
+      debugPrint('LocalTreeStorage: Seeded 25 demo trees for NGO $ngoId');
+    } catch (e) {
+      debugPrint('LocalTreeStorage seedDemoTreesForNgo error: $e');
+    }
   }
 
   /// Get recent trees for an NGO (limited).

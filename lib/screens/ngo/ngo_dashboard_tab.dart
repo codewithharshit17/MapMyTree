@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/tree_detail_bottom_sheet.dart';
+import 'planted_trees_screen.dart';
 
 class NgoDashboardTab extends StatefulWidget {
   const NgoDashboardTab({super.key});
@@ -128,12 +129,27 @@ class _NgoDashboardTabState extends State<NgoDashboardTab> {
                 // Stats cards
                 Row(children: [
                   Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PlantedTreesScreen(),
+                          ),
+                        ).then((_) {
+                          if (mounted) {
+                            setState(() {});
+                          }
+                        });
+                      },
                       child: _StatCard(
-                    title: 'Total Trees',
-                    value: '${stats['totalTrees']}',
-                    icon: Icons.park,
-                    color: const Color(0xFF2D6A4F),
-                  )),
+                        title: 'Total Trees',
+                        value: '${stats['totalTrees']}',
+                        icon: Icons.park,
+                        color: const Color(0xFF2D6A4F),
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                       child: _StatCard(
