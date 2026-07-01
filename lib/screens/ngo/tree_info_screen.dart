@@ -51,7 +51,7 @@ class _TreeInfoScreenState extends State<TreeInfoScreen> {
     final url = rawUrl.startsWith('https://mapmytree.app/tree/') 
         ? rawUrl.replaceFirst('https://mapmytree.app/tree/', 'https://codewithharshit17.github.io/MapMyTree/tree.html?id=')
         : rawUrl;
-    SharePlus.instance.share(ShareParams(text: 'Check out this 🌳 ${t.treeName} planted via MapMyTree!\nView the tree: $url'));
+    SharePlus.instance.share(ShareParams(text: 'Tree ID: $uniqueId\nQR Code Link: $url'));
   }
 
   @override

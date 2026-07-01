@@ -47,6 +47,23 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
   bool _isCapturing = false;
   String _gpsSource = ''; // 'exif' or 'device'
   String? _selectedLandownerType;
+  String? _selectedSpecies;
+
+  final List<String> _speciesList = const [
+    'Mangifera Indica (Mango)',
+    'Artocarpus heterophyllus (Jackfruit)',
+  ];
+
+  String? _mapTreeTypeToSpecies(String? treeType) {
+    if (treeType == null) return null;
+    final lower = treeType.toLowerCase();
+    if (lower.contains('mango')) {
+      return 'Mangifera Indica (Mango)';
+    } else if (lower.contains('jackfruit')) {
+      return 'Artocarpus heterophyllus (Jackfruit)';
+    }
+    return null;
+  }
 
   // Request dropdown
   List<RequestModel> _pendingRequests = [];
@@ -81,7 +98,8 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
             }
             _selectedRequest = _pendingRequests.firstWhere((r) => r.id == widget.prefilledRequest!.id);
             _treeNameController.text = _selectedRequest!.treeName ?? '';
-            _speciesController.text = _selectedRequest!.treeType;
+            _selectedSpecies = _mapTreeTypeToSpecies(_selectedRequest!.treeType);
+            _speciesController.text = _selectedSpecies ?? '';
           }
         });
       }
@@ -314,6 +332,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
           _gpsSource = '';
           _selectedRequest = null;
           _selectedLandownerType = null;
+          _selectedSpecies = null;
           _selectedDate = DateTime.now();
           _isSubmitting = false;
         });
@@ -400,7 +419,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         onPressed: () {
-                          SharePlus.instance.share(ShareParams(text: 'Check out this newly planted tree!\nTree ID: $generatedTreeId\nView here: $qrCodeUrl'));
+                          SharePlus.instance.share(ShareParams(text: 'Tree ID: $generatedTreeId\nQR Code Link: $qrCodeUrl'));
                         },
                       ),
                     ),
@@ -501,11 +520,18 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
 
             // Tree species
             _buildLabel('Tree Species *'),
-            TextFormField(
-              controller: _speciesController,
-              decoration: _inputDecoration('e.g. Ficus benghalensis'),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'Required' : null,
+            DropdownButtonFormField<String>(
+              initialValue: _selectedSpecies,
+              decoration: _inputDecoration('Select species'),
+              items: _speciesList.map((species) => DropdownMenuItem<String>(
+                value: species,
+                child: Text(species),
+              )).toList(),
+              onChanged: (v) => setState(() {
+                _selectedSpecies = v;
+                _speciesController.text = v ?? '';
+              }),
+              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
             ),
             const SizedBox(height: 16),
 
@@ -577,18 +603,20 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
                             _treeNameController.text = v.treeName!;
                           }
                           if (v.treeType.isNotEmpty) {
-                            _speciesController.text = v.treeType;
+                            _selectedSpecies = _mapTreeTypeToSpecies(v.treeType);
+                            _speciesController.text = _selectedSpecies ?? '';
                           }
                         } else {
                           _treeNameController.clear();
+                          _selectedSpecies = null;
                           _speciesController.clear();
                         }
                       }),
                     ),
             const SizedBox(height: 16),
 
-            // Planting date
-            _buildLabel('Planting Date'),
+            // Plantation date
+            _buildLabel('Plantation Date'),
             InkWell(
               onTap: _pickDate,
               child: InputDecorator(
@@ -623,8 +651,16 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
                 DropdownMenuItem(value: 'Private land', child: Text('Private land')),
                 DropdownMenuItem(value: 'Government land', child: Text('Government land')),
                 DropdownMenuItem(value: 'NGO/Institute land', child: Text('NGO/Institute land')),
+                DropdownMenuItem(value: 'Forest land', child: Text('Forest land')),
               ],
-              onChanged: (v) => setState(() => _selectedLandownerType = v),
+              onChanged: (v) => setState(() {
+                _selectedLandownerType = v;
+                if (v == 'Forest land') {
+                  _landownerNameController.text = 'Forest Department';
+                } else if (_landownerNameController.text == 'Forest Department') {
+                  _landownerNameController.clear();
+                }
+              }),
               validator: (v) => v == null ? 'Please select a landowner type' : null,
             ),
             

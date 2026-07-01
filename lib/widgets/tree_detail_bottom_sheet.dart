@@ -167,7 +167,7 @@ class TreeDetailBottomSheet extends StatelessWidget {
                           const SizedBox(height: 8),
                           TextButton.icon(
                             onPressed: () {
-                              SharePlus.instance.share(ShareParams(text: 'Check out this 🌳 ${tree.treeName} planted via MapMyTree!\nView the tree: $url'));
+                              SharePlus.instance.share(ShareParams(text: 'Tree ID: ${tree.treeId ?? tree.id}\nQR Code Link: $url'));
                             },
                             icon: const Icon(Icons.share, size: 18),
                             label: const Text('Share Tree', style: TextStyle(fontWeight: FontWeight.bold)),

@@ -137,7 +137,7 @@ class NewTreeService {
 
       // Create CSV header
       final StringBuffer csvBuffer = StringBuffer();
-      csvBuffer.writeln('Tree ID,Unique ID,Name,Species,Planted Date,Health Status,Latitude,Longitude,Exact Location,Notes,Planted By');
+      csvBuffer.writeln('Tree ID,Unique ID,Name,Species,Plantation Date,Health Status,Latitude,Longitude,Exact Location,Notes,Planted By');
 
       // Add tree rows
       for (final tree in trees) {
