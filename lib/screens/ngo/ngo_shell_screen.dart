@@ -11,6 +11,7 @@ import 'ngo_requests_tab.dart';
 import 'qr_scanner_screen.dart';
 import '../../services/new_tree_service.dart';
 import '../user_profile_screen.dart';
+import 'ngo_admin_dashboard_tab.dart';
 
 class NgoShellScreen extends StatefulWidget {
   const NgoShellScreen({super.key});
@@ -56,31 +57,44 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
     }
   }
 
-  static const List<_TabConfig> _tabs = [
-    _TabConfig(
-        icon: Icons.dashboard_outlined,
-        activeIcon: Icons.dashboard,
-        label: 'Dashboard'),
-    _TabConfig(
-        icon: Icons.add_circle_outline,
-        activeIcon: Icons.add_circle,
-        label: 'Add Tree'),
-    _TabConfig(
-        icon: Icons.map_outlined,
-        activeIcon: Icons.map,
-        label: 'Map'),
-    _TabConfig(
-        icon: Icons.inbox_outlined,
-        activeIcon: Icons.inbox,
-        label: 'Requests'),
-    _TabConfig(
-        icon: Icons.qr_code_scanner_outlined,
-        activeIcon: Icons.qr_code_scanner,
-        label: 'Scan QR'),
-  ];
+  List<_TabConfig> _buildTabsList() {
+    return [
+      const _TabConfig(
+          icon: Icons.dashboard_outlined,
+          activeIcon: Icons.dashboard,
+          label: 'Dashboard'),
+      const _TabConfig(
+          icon: Icons.add_circle_outline,
+          activeIcon: Icons.add_circle,
+          label: 'Add Tree'),
+      const _TabConfig(
+          icon: Icons.map_outlined,
+          activeIcon: Icons.map,
+          label: 'Map'),
+      const _TabConfig(
+          icon: Icons.inbox_outlined,
+          activeIcon: Icons.inbox,
+          label: 'Requests'),
+      const _TabConfig(
+          icon: Icons.qr_code_scanner_outlined,
+          activeIcon: Icons.qr_code_scanner,
+          label: 'Scan QR'),
+      if (SessionHelper.isNgoAdmin)
+        const _TabConfig(
+            icon: Icons.admin_panel_settings_outlined,
+            activeIcon: Icons.admin_panel_settings,
+            label: 'Admin'),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final tabs = _buildTabsList();
+    // Safety check if tab is out of range after role switches
+    if (_currentTab >= tabs.length) {
+      _currentTab = 0;
+    }
+
     return PopScope(
       canPop: _currentTab == 0,
       onPopInvokedWithResult: (didPop, result) {
@@ -99,8 +113,10 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('MapMyTree NGO',
-                      style: TextStyle(fontSize: 12, color: Colors.white70)),
+                  Text(
+                    SessionHelper.isNgoAdmin ? 'MapMyTree NGO Admin' : 'MapMyTree NGO Volunteer',
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
                   Text(
                     SessionHelper.userName.isNotEmpty
                         ? SessionHelper.userName
@@ -193,6 +209,7 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
           const NgoMapScreen(),
           const NgoRequestsTab(),
           QrScannerScreen(isActive: _currentTab == 4),
+          if (SessionHelper.isNgoAdmin) const NgoAdminDashboardTab(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -204,7 +221,7 @@ class _NgoShellScreenState extends State<NgoShellScreen> {
         unselectedItemColor: Colors.grey,
         selectedLabelStyle:
             const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-        items: _tabs
+        items: tabs
             .map((tab) => BottomNavigationBarItem(
                   icon: Icon(tab.icon),
                   activeIcon: Icon(tab.activeIcon),

@@ -11,7 +11,6 @@ import '../models/request_model.dart';
 class LocalTreeStorage {
   static const _treesKey = 'local_trees';
   static const _requestsKey = 'local_requests';
-  static bool _isSeeded = false;
   static final StreamController<List<Map<String, dynamic>>> _treeController = StreamController.broadcast();
   static final StreamController<List<Map<String, dynamic>>> _requestController = StreamController.broadcast();
 

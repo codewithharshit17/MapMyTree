@@ -44,7 +44,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       }
 
       final List<NewTreeModel> trees;
-      if (profile.role == 'ngo') {
+      if (profile.isNgoRole) {
         trees = await _treeService.getTreesForNgo(widget.userId);
       } else {
         trees = await _treeService.getTreesForUser(widget.userId);
@@ -71,7 +71,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1B4332),
         foregroundColor: Colors.white,
-        title: Text(_profile?.role == 'ngo' ? 'NGO Profile' : 'User Profile', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(_profile != null && _profile!.isNgoRole ? 'NGO Profile' : 'User Profile', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         elevation: 0,
         actions: [
           if (_profile != null && _profile!.id == _authService.currentUser?.id)
@@ -190,8 +190,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _profile!.role == 'ngo' ? 'Trees Planted by NGO' : 'Trees Planted for User',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B4332)),
+                  _profile!.isNgoRole ? 'Trees Planted by NGO' : 'Trees Planted for User',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B4332)),
                 ),
                 const SizedBox(height: 16),
                 if (_trees.isEmpty)

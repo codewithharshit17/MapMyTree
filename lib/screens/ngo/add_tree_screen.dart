@@ -17,6 +17,7 @@ import 'package:uuid/uuid.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/qr_download_helper.dart';
+import '../../services/master_data_service.dart';
 class AddTreeScreen extends StatefulWidget {
   final RequestModel? prefilledRequest;
   const AddTreeScreen({super.key, this.prefilledRequest});
@@ -49,16 +50,33 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
   String? _selectedLandownerType;
   String? _selectedSpecies;
 
-  final List<String> _speciesList = const [
-    'Mangifera Indica (Mango)',
-    'Artocarpus heterophyllus (Jackfruit)',
-  ];
+  List<TreeSpecies> _dbSpeciesList = [];
+  bool _loadingSpecies = true;
+
+  Future<void> _loadTreeSpecies() async {
+    try {
+      final list = await MasterDataService().getTreeSpecies();
+      if (mounted) {
+        setState(() {
+          _dbSpeciesList = list;
+          _loadingSpecies = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingSpecies = false);
+    }
+  }
 
   String? _mapTreeTypeToSpecies(String? treeType) {
     if (treeType == null) return null;
     final lower = treeType.toLowerCase();
+    for (var sp in _dbSpeciesList) {
+      if (sp.commonName.toLowerCase().contains(lower) || sp.name.toLowerCase().contains(lower)) {
+        return '${sp.name} (${sp.commonName})';
+      }
+    }
     if (lower.contains('mango')) {
-      return 'Mangifera Indica (Mango)';
+      return 'Mangifera indica (Mango)';
     } else if (lower.contains('jackfruit')) {
       return 'Artocarpus heterophyllus (Jackfruit)';
     }
@@ -74,7 +92,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
   void initState() {
     super.initState();
     _loadPendingRequests();
-    // Note: _selectedRequest is set AFTER loading so we can match against list items
+    _loadTreeSpecies();
   }
 
   Future<void> _loadPendingRequests() async {
@@ -520,19 +538,24 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
 
             // Tree species
             _buildLabel('Tree Species *'),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedSpecies,
-              decoration: _inputDecoration('Select species'),
-              items: _speciesList.map((species) => DropdownMenuItem<String>(
-                value: species,
-                child: Text(species),
-              )).toList(),
-              onChanged: (v) => setState(() {
-                _selectedSpecies = v;
-                _speciesController.text = v ?? '';
-              }),
-              validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-            ),
+            _loadingSpecies
+                ? const SizedBox(height: 20, child: LinearProgressIndicator(color: Color(0xFF1B4332)))
+                : DropdownButtonFormField<String>(
+                    initialValue: _selectedSpecies,
+                    decoration: _inputDecoration('Select species'),
+                    items: _dbSpeciesList.map((sp) {
+                      final val = '${sp.name} (${sp.commonName})';
+                      return DropdownMenuItem<String>(
+                        value: val,
+                        child: Text(val),
+                      );
+                    }).toList(),
+                    onChanged: (v) => setState(() {
+                      _selectedSpecies = v;
+                      _speciesController.text = v ?? '';
+                    }),
+                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                  ),
             const SizedBox(height: 16),
 
             // Planted for — read-only card when prefilled, dropdown otherwise

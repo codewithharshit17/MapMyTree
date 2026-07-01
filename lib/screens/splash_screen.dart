@@ -68,7 +68,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (DevSession().isActive) {
       await minDelay;
       if (!mounted) return;
-      if (DevSession().userRole == 'ngo') {
+      if (DevSession().userRole == 'ngo' || DevSession().userRole == 'ngo_admin' || DevSession().userRole == 'ngo_volunteer') {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NgoShellScreen()));
       } else {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserShellScreen()));
@@ -112,7 +112,7 @@ class _SplashScreenState extends State<SplashScreen>
           transitionDuration: const Duration(milliseconds: 500),
         ),
       );
-    } else if (authProvider.status == AuthStatus.ngoAuthenticated) {
+    } else if (authProvider.status == AuthStatus.ngoAdminAuthenticated || authProvider.status == AuthStatus.ngoVolunteerAuthenticated) {
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(

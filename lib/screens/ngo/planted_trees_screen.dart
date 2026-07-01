@@ -5,7 +5,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/new_tree_model.dart';
 import '../../services/new_tree_service.dart';
 import '../../core/session_helper.dart';
-import '../../core/dev_session.dart';
 import '../../widgets/tree_detail_bottom_sheet.dart';
 import '../../widgets/shimmer_loading.dart';
 
@@ -19,7 +18,6 @@ class PlantedTreesScreen extends StatefulWidget {
 class _PlantedTreesScreenState extends State<PlantedTreesScreen> {
   final _treeService = NewTreeService();
   final List<NewTreeModel> _trees = [];
-  bool _isLoading = false;
   bool _isFirstLoad = true;
   String? _errorMessage;
   int _currentPage = 1;
@@ -40,7 +38,6 @@ class _PlantedTreesScreenState extends State<PlantedTreesScreen> {
 
   Future<void> _fetchTrees() async {
     setState(() {
-      _isLoading = true;
       _errorMessage = null;
     });
 
@@ -62,13 +59,11 @@ class _PlantedTreesScreenState extends State<PlantedTreesScreen> {
 
       setState(() {
         _isFirstLoad = false;
-        _isLoading = false;
         _trees.clear();
         _trees.addAll(pageTrees);
       });
     } catch (e) {
       setState(() {
-        _isLoading = false;
         _isFirstLoad = false;
         _errorMessage = 'Failed to load trees. Please check your internet connection.';
       });

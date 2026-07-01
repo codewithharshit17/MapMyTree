@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../models/profile_model.dart';
 
-enum AuthStatus { unknown, unauthenticated, userAuthenticated, ngoAuthenticated }
+enum AuthStatus { unknown, unauthenticated, userAuthenticated, ngoAdminAuthenticated, ngoVolunteerAuthenticated }
 
 class AppAuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -13,10 +13,15 @@ class AppAuthProvider extends ChangeNotifier {
 
   AuthStatus get status => _status;
   ProfileModel? get profile => _profile;
-  bool get isNgo => _status == AuthStatus.ngoAuthenticated;
+  bool get isNgo =>
+      _status == AuthStatus.ngoAdminAuthenticated ||
+      _status == AuthStatus.ngoVolunteerAuthenticated;
+  bool get isNgoAdmin => _status == AuthStatus.ngoAdminAuthenticated;
+  bool get isNgoVolunteer => _status == AuthStatus.ngoVolunteerAuthenticated;
   bool get isLoggedIn =>
       _status == AuthStatus.userAuthenticated ||
-      _status == AuthStatus.ngoAuthenticated;
+      _status == AuthStatus.ngoAdminAuthenticated ||
+      _status == AuthStatus.ngoVolunteerAuthenticated;
 
   AppAuthProvider() {
     // Check existing session on startup
@@ -49,8 +54,18 @@ class AppAuthProvider extends ChangeNotifier {
     final role = await _authService.getUserRole(supabaseUser.id);
     _profile = await _authService.getProfileModel(supabaseUser.id);
 
-    if (role == 'ngo') {
-      _status = AuthStatus.ngoAuthenticated;
+    // If profile is disabled (is_active == false), treat as unauthenticated
+    if (_profile != null && !_profile!.isActive) {
+      _status = AuthStatus.unauthenticated;
+      _profile = null;
+      notifyListeners();
+      return;
+    }
+
+    if (role == 'ngo_admin') {
+      _status = AuthStatus.ngoAdminAuthenticated;
+    } else if (role == 'ngo_volunteer' || role == 'ngo') {
+      _status = AuthStatus.ngoVolunteerAuthenticated;
     } else {
       _status = AuthStatus.userAuthenticated;
     }

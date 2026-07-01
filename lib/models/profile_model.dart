@@ -4,9 +4,10 @@ class ProfileModel {
   final String? email;
   final String? phoneNumber;
   final bool isVerified;
-  final String role; // 'user' or 'ngo'
+  final String role; // 'ngo_admin', 'ngo_volunteer', 'normal_user'
   final String? avatarUrl;
   final DateTime createdAt;
+  final bool isActive;
 
   const ProfileModel({
     required this.id,
@@ -17,6 +18,7 @@ class ProfileModel {
     required this.role,
     this.avatarUrl,
     required this.createdAt,
+    this.isActive = true,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -26,11 +28,12 @@ class ProfileModel {
       email: json['email'],
       phoneNumber: json['phone_number'],
       isVerified: json['is_verified'] ?? true, // defaults to true for backwards compatibility
-      role: json['role'] ?? 'user',
+      role: json['role'] ?? 'normal_user',
       avatarUrl: json['avatar_url'],
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
+      isActive: json['is_active'] ?? true,
     );
   }
 
@@ -43,7 +46,11 @@ class ProfileModel {
         'role': role,
         'avatar_url': avatarUrl,
         'created_at': createdAt.toIso8601String(),
+        'is_active': isActive,
       };
+
+  bool get isNgoRole => role == 'ngo_admin' || role == 'ngo_volunteer' || role == 'ngo';
+  bool get isUserRole => role == 'normal_user' || role == 'user';
 
   String get displayName => fullName ?? email ?? 'Unknown';
   String get initials {

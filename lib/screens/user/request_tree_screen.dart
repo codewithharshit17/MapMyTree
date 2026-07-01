@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/session_helper.dart';
 import '../../models/request_model.dart';
 import '../../services/request_service.dart';
+import '../../services/master_data_service.dart';
 
 // ── Maharashtra NGO plantation trees with exact costs ─────────────────────
 class _PlantOption {
@@ -23,23 +24,7 @@ class _PlantOption {
   String get costLabel => '₹$costRs (sapling + planting)';
 }
 
-const List<_PlantOption> _plantOptions = [
-  _PlantOption(name: 'Neem',          localName: 'Nimb',      costRs: 35,  emoji: '🌿'),
-  _PlantOption(name: 'Banyan',        localName: 'Vad',       costRs: 90,  emoji: '🌳'),
-  _PlantOption(name: 'Peepal',        localName: 'Pimpal',    costRs: 65,  emoji: '🍃'),
-  _PlantOption(name: 'Mango',         localName: 'Amba',      costRs: 55,  emoji: '🥭'),
-  _PlantOption(name: 'Tamarind',      localName: 'Chincha',   costRs: 50,  emoji: '🌱'),
-  _PlantOption(name: 'Amla',          localName: 'Avla',      costRs: 45,  emoji: '🫐'),
-  _PlantOption(name: 'Teak',          localName: 'Sag',       costRs: 75,  emoji: '🪵'),
-  _PlantOption(name: 'Bamboo',        localName: 'Baans',     costRs: 30,  emoji: '🎋'),
-  _PlantOption(name: 'Jackfruit',     localName: 'Phanas',    costRs: 60,  emoji: '🍈'),
-  _PlantOption(name: 'Kadamba',       localName: 'Kadamba',   costRs: 40,  emoji: '🌸'),
-  _PlantOption(name: 'Arjun',         localName: 'Arjun',     costRs: 45,  emoji: '🌲'),
-  _PlantOption(name: 'Karanj',        localName: 'Karanj',    costRs: 35,  emoji: '🌾'),
-  _PlantOption(name: 'Subabul',       localName: 'Subabul',   costRs: 25,  emoji: '🌿'),
-  _PlantOption(name: 'Drumstick',     localName: 'Shevaga',   costRs: 40,  emoji: '🥦'),
-  _PlantOption(name: 'Custard Apple', localName: 'Sitaphal',  costRs: 50,  emoji: '🍏'),
-];
+// Local plants are dynamically loaded from MasterDataService.
 // ──────────────────────────────────────────────────────────────────────────
 
 class RequestTreeScreen extends StatefulWidget {
@@ -61,6 +46,53 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
   DateTime? _occasionDate;
   final List<String> _occasions = ['Birthday', 'Anniversary', 'In Memory', 'Other'];
   final _customOccasionCtrl = TextEditingController();
+
+  List<_PlantOption> _dynamicPlantOptions = [];
+  bool _loadingPlants = true;
+
+  List<PlantationLocation> _locations = [];
+  PlantationLocation? _selectedLocation;
+  bool _loadingLocations = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlants();
+    _loadLocations();
+  }
+
+  Future<void> _loadPlants() async {
+    try {
+      final list = await MasterDataService().getTreeSpecies();
+      if (mounted) {
+        setState(() {
+          _dynamicPlantOptions = list.map((sp) => _PlantOption(
+            name: sp.commonName,
+            localName: sp.name,
+            costRs: sp.cost.toInt(),
+            emoji: sp.emoji,
+          )).toList();
+          _loadingPlants = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingPlants = false);
+    }
+  }
+
+  Future<void> _loadLocations() async {
+    try {
+      final list = await MasterDataService().getPlantationLocations();
+      if (mounted) {
+        setState(() {
+          _locations = list.where((l) => l.isActive).toList();
+          _loadingLocations = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingLocations = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -129,6 +161,7 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
       await _requestService.createRequest(
         userId: SessionHelper.userId,
         treeType: _selectedPlant!.name,
+        preferredLocation: _selectedLocation?.name,
         treeName: _treeNameCtrl.text.trim().isNotEmpty ? _treeNameCtrl.text.trim() : null,
         occasion: occasionValue,
         occasionDate: _selectedOccasion == 'Other' ? null : _occasionDate?.toIso8601String(),
@@ -148,6 +181,7 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
         _formKey.currentState!.reset();
         setState(() {
           _selectedPlant = null;
+          _selectedLocation = null;
           _selectedOccasion = null;
           _occasionDate = null;
           _paymentScreenshot = null;
@@ -193,58 +227,60 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
 
             // ── Plant Dropdown ──────────────────────────────────────────────
             _label('Select Plant *'),
-            DropdownButtonFormField<_PlantOption>(
-              initialValue: _selectedPlant,
-              isExpanded: true,
-              itemHeight: 60,
-              decoration: _dec('Choose a plant...'),
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF1B4332)),
-              selectedItemBuilder: (BuildContext context) {
-                return _plantOptions.map<Widget>((plant) {
-                  return Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '${plant.emoji}  ${plant.name} (${plant.localName}) - ₹${plant.costRs}',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                }).toList();
-              },
-              dropdownColor: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              items: _plantOptions.map((plant) {
-                return DropdownMenuItem<_PlantOption>(
-                  value: plant,
-                  child: Row(children: [
-                    Text(plant.emoji, style: const TextStyle(fontSize: 20)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '${plant.name} (${plant.localName})',
+            _loadingPlants
+                ? const SizedBox(height: 20, child: LinearProgressIndicator(color: Color(0xFF1B4332)))
+                : DropdownButtonFormField<_PlantOption>(
+                    initialValue: _selectedPlant,
+                    isExpanded: true,
+                    itemHeight: 60,
+                    decoration: _dec('Choose a plant...'),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF1B4332)),
+                    selectedItemBuilder: (BuildContext context) {
+                      return _dynamicPlantOptions.map<Widget>((plant) {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '${plant.emoji}  ${plant.name} (${plant.localName}) - ₹${plant.costRs}',
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            '₹${plant.costRs}',
-                            style: const TextStyle(color: Color(0xFF2D6A4F), fontSize: 12, fontWeight: FontWeight.w700),
+                        );
+                      }).toList();
+                    },
+                    dropdownColor: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    items: _dynamicPlantOptions.map((plant) {
+                      return DropdownMenuItem<_PlantOption>(
+                        value: plant,
+                        child: Row(children: [
+                          Text(plant.emoji, style: const TextStyle(fontSize: 20)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '${plant.name} (${plant.localName})',
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  '₹${plant.costRs}',
+                                  style: const TextStyle(color: Color(0xFF2D6A4F), fontSize: 12, fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ]),
-                );
-              }).toList(),
-              onChanged: (val) => setState(() {
-                _selectedPlant = val;
-                _showQr = val != null;
-              }),
-              validator: (val) => val == null ? 'Please select a plant' : null,
-            ),
+                        ]),
+                      );
+                    }).toList(),
+                    onChanged: (val) => setState(() {
+                      _selectedPlant = val;
+                      _showQr = val != null;
+                    }),
+                    validator: (val) => val == null ? 'Please select a plant' : null,
+                  ),
 
             // ── Cost Info Card ─────────────────────────────────────────────
             if (_selectedPlant != null) ...[
@@ -283,12 +319,38 @@ class _RequestTreeScreenState extends State<RequestTreeScreen> {
               ),
             ],
 
-            const SizedBox(height: 16),
+             const SizedBox(height: 16),
             _label("Tree's Name (Optional)"),
             TextFormField(
               controller: _treeNameCtrl,
               decoration: _dec('e.g., Arjun\'s Neem'),
             ),
+
+            const SizedBox(height: 16),
+            _label('Preferred Plantation Location (Optional)'),
+            _loadingLocations
+                ? const SizedBox(height: 20, child: LinearProgressIndicator(color: Color(0xFF1B4332)))
+                : DropdownButtonFormField<PlantationLocation>(
+                    initialValue: _selectedLocation,
+                    isExpanded: true,
+                    decoration: _dec('Select preferred site...'),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF1B4332)),
+                    dropdownColor: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    items: [
+                      const DropdownMenuItem<PlantationLocation>(
+                        value: null,
+                        child: Text('Any active site', style: TextStyle(color: Colors.grey)),
+                      ),
+                      ..._locations.map((loc) {
+                        return DropdownMenuItem<PlantationLocation>(
+                          value: loc,
+                          child: Text('${loc.name} (${loc.city})'),
+                        );
+                      }),
+                    ],
+                    onChanged: (val) => setState(() => _selectedLocation = val),
+                  ),
 
             const SizedBox(height: 16),
             _label('Occasion (Optional)'),

@@ -18,7 +18,7 @@ class AuthService {
       final res = await _supabase.auth.signUp(
         email: email,
         password: password,
-        data: {'name': name, 'phone': phone, 'role': 'user'},
+        data: {'name': name, 'phone': phone, 'role': 'normal_user'},
       );
       if (res.user != null) {
         await handlePostLogin(res.user!);
@@ -45,7 +45,7 @@ class AuthService {
         password: password,
         data: {
           'name': ngoName,
-          'role': 'ngo',
+          'role': 'ngo_volunteer',
           'registration_number': registrationNumber,
           'contact_phone': contactPhone,
           'address': address,
@@ -118,9 +118,12 @@ class AuthService {
           .select('role')
           .eq('id', uid)
           .maybeSingle();
-      return data?['role'] ?? 'user';
+      final role = data?['role'] ?? 'normal_user';
+      if (role == 'ngo') return 'ngo_volunteer';
+      if (role == 'user') return 'normal_user';
+      return role;
     } catch (e) {
-      return 'user';
+      return 'normal_user';
     }
   }
 
@@ -152,8 +155,11 @@ class AuthService {
         'ngo3@gmail.com',
         'ngo4@gmail.com',
       ];
-      role = ngoEmails.contains(email) ? 'ngo' : 'user';
+      role = ngoEmails.contains(email) ? 'ngo_volunteer' : 'normal_user';
     }
+
+    if (role == 'ngo') role = 'ngo_volunteer';
+    if (role == 'user') role = 'normal_user';
 
     try {
       await _supabase.from('profiles').upsert({

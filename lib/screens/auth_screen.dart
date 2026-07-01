@@ -85,7 +85,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
 
   void _navigateBasedOnRole(String role) {
     if (!mounted) return;
-    if (role == 'ngo') {
+    if (role == 'ngo' || role == 'ngo_admin' || role == 'ngo_volunteer') {
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
@@ -572,26 +572,57 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             children: [
               const Divider(),
               const Text('🧪 Dev Testing Only', style: TextStyle(color: Colors.grey)),
-              const SizedBox(height: 8),
-              Row(
+              const SizedBox(height: 12),
+              Column(
                 children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
-                      onPressed: () {
-                        DevSession().loginAsNGO();
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => const NgoShellScreen()),
-                        );
-                      },
-                      child: const Text('Login as NGO', style: TextStyle(color: Colors.white)),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1B4332),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () {
+                            DevSession().loginAsNGOAdmin();
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => const NgoShellScreen()),
+                            );
+                          },
+                          child: const Text('Login as NGO Admin', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2D6A4F),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () {
+                            DevSession().loginAsNGOVolunteer();
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => const NgoShellScreen()),
+                            );
+                          },
+                          child: const Text('Login as Volunteer', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[700]),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[700],
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                       onPressed: () {
                         DevSession().loginAsUser();
                         Navigator.pushReplacement(
@@ -599,7 +630,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                           MaterialPageRoute(builder: (_) => const UserShellScreen()),
                         );
                       },
-                      child: const Text('Login as User', style: TextStyle(color: Colors.white)),
+                      child: const Text('Login as Normal User', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],

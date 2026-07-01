@@ -44,6 +44,8 @@ class SessionHelper {
     return Supabase.instance.client.auth.currentUser != null;
   }
 
-  static bool get isNgo => userRole == 'ngo';
-  static bool get isUser => userRole == 'user';
+  static bool get isNgo => userRole == 'ngo_admin' || userRole == 'ngo_volunteer' || userRole == 'ngo';
+  static bool get isUser => userRole == 'normal_user' || userRole == 'user';
+  static bool get isNgoAdmin => userRole == 'ngo_admin';
+  static bool get isNgoVolunteer => userRole == 'ngo_volunteer' || userRole == 'ngo';
 }
