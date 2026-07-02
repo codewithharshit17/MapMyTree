@@ -108,6 +108,14 @@ class _TreeInfoScreenState extends State<TreeInfoScreen> {
                        width: double.infinity,
                        height: 250,
                        fit: BoxFit.cover,
+                       errorBuilder: (context, error, stackTrace) => Container(
+                         height: 250,
+                         width: double.infinity,
+                         color: Colors.grey.shade200,
+                         child: const Center(
+                           child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                         ),
+                       ),
                      )
                    : CachedNetworkImage(
                        imageUrl: t.firstPhotoUrl,

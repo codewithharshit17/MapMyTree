@@ -47,6 +47,14 @@ class TreeDetailBottomSheet extends StatelessWidget {
                           height: 200,
                           width: double.infinity,
                           fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            height: 200,
+                            width: double.infinity,
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                            ),
+                          ),
                         )
                       : CachedNetworkImage(
                           imageUrl: tree.firstPhotoUrl, height: 200, width: double.infinity, fit: BoxFit.cover,

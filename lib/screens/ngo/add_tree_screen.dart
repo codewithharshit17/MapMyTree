@@ -49,6 +49,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
   String _gpsSource = ''; // 'exif' or 'device'
   String? _selectedLandownerType;
   String? _selectedSpecies;
+  String? _selectedPrivateLandowner;
 
   List<TreeSpecies> _dbSpeciesList = [];
   bool _loadingSpecies = true;
@@ -351,6 +352,7 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
           _selectedRequest = null;
           _selectedLandownerType = null;
           _selectedSpecies = null;
+          _selectedPrivateLandowner = null;
           _selectedDate = DateTime.now();
           _isSubmitting = false;
         });
@@ -678,9 +680,10 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
               ],
               onChanged: (v) => setState(() {
                 _selectedLandownerType = v;
+                _selectedPrivateLandowner = null;
                 if (v == 'Forest land') {
                   _landownerNameController.text = 'Forest Department';
-                } else if (_landownerNameController.text == 'Forest Department') {
+                } else {
                   _landownerNameController.clear();
                 }
               }),
@@ -690,11 +693,34 @@ class _AddTreeScreenState extends State<AddTreeScreen> {
             if (_selectedLandownerType != null) ...[
               const SizedBox(height: 16),
               _buildLabel('Landowner / Institute Name *'),
-              TextFormField(
-                controller: _landownerNameController,
-                decoration: _inputDecoration('e.g., Name of private owner or institute'),
-                validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
-              ),
+              _selectedLandownerType == 'Private land'
+                  ? DropdownButtonFormField<String>(
+                      key: ValueKey(_selectedPrivateLandowner),
+                      initialValue: _selectedPrivateLandowner,
+                      decoration: _inputDecoration('Select private landowner'),
+                      isExpanded: true,
+                      items: const [
+                        DropdownMenuItem(value: 'chindhyachi wadi ashram school', child: Text('chindhyachi wadi ashram school')),
+                        DropdownMenuItem(value: 'Prakash Paradhi', child: Text('Prakash Paradhi')),
+                        DropdownMenuItem(value: 'Draupadi Bhagat', child: Text('Draupadi Bhagat')),
+                        DropdownMenuItem(value: 'Mahadu Dupare', child: Text('Mahadu Dupare')),
+                        DropdownMenuItem(value: 'Valu Hambir', child: Text('Valu Hambir')),
+                        DropdownMenuItem(value: 'Dinesh Dupare', child: Text('Dinesh Dupare')),
+                        DropdownMenuItem(value: 'Ramdas Dupare', child: Text('Ramdas Dupare')),
+                        DropdownMenuItem(value: 'Bhau Wagh', child: Text('Bhau Wagh')),
+                        DropdownMenuItem(value: 'Mahadu Dhadhwad', child: Text('Mahadu Dhadhwad')),
+                      ],
+                      onChanged: (v) => setState(() {
+                        _selectedPrivateLandowner = v;
+                        _landownerNameController.text = v ?? '';
+                      }),
+                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    )
+                  : TextFormField(
+                      controller: _landownerNameController,
+                      decoration: _inputDecoration('e.g., Name of private owner or institute'),
+                      validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                    ),
             ],
             const SizedBox(height: 24),
 
